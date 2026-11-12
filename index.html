@@ -4,6 +4,28 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>诗词闯关大冒险</title>
+<script>
+/* ================= 百度统计 =================
+   1) 去 https://tongji.baidu.com 添加站点（填 https://qingwugogo.github.io/poetry-adventure/）
+   2) 拿到形如 6a1b2c3d4e5f6a7b8c9d0e1f 的 hm.js 参数，填到下面
+   3) ID 为空时不加载脚本，避免无效请求 */
+var BAIDU_TONGJI_ID = "";
+(function(){
+  if(!BAIDU_TONGJI_ID) return;
+  window._hmt = window._hmt || [];
+  var hm = document.createElement("script");
+  hm.src = "https://hm.baidu.com/hm.js?" + BAIDU_TONGJI_ID;
+  hm.async = true;
+  document.head.appendChild(hm);
+})();
+/* 事件埋点：track(类别, 动作, 标签, 数值) */
+function track(cat, act, label, val){
+  try{
+    window._hmt = window._hmt || [];
+    _hmt.push(["_trackEvent", String(cat), String(act), label ? String(label) : "", val || 0]);
+  }catch(e){}
+}
+</script>
 <style>
   :root{
     --bg1:#ffe9c7; --bg2:#ffd591; --grass:#8fd14f; --grass2:#6db33f;
@@ -2147,6 +2169,7 @@ function stopChallenge(){
 function parentPass(){
   stopRecognition();
   if(curLevel<0) return;
+  if(POEMS[curLevel]) track("关卡","家长确认通过",POEMS[curLevel].t, curLevel+1);
   toastSpeech("家长确认通过！");
   levelPassed();
 }
@@ -2223,6 +2246,7 @@ function startLevel(i){
   hidePanels(); clearMarks();
   switchScreen("levelScreen");
   checkMicPermission();
+  track("关卡","进入关卡","第"+(i+1)+"关 "+p.t, i+1);
   // 中文报关卡名，报完自动朗读卷轴
   setTimeout(()=>announceName(true), 400);
 }
@@ -2247,6 +2271,7 @@ function levelPassed(){
   stopRecognition();
   killMonster();
   const first = !S.done.includes(curLevel);
+  if(curLevel>=0 && POEMS[curLevel]) track("关卡","过关",POEMS[curLevel].t, curLevel+1);
   if(first){
     S.done.push(curLevel);
     if(S.cur===curLevel && S.cur<POEMS.length-1) S.cur++;
@@ -2341,6 +2366,7 @@ function grantChestPrize(){
   S.openedChests.push(chestK);
   const t=TREASURES[Math.floor(Math.random()*TREASURES.length)];
   S.inv.push(TREASURES.indexOf(t));
+  track("宝箱","开到宝物",t.n+"("+RARITY_TXT[t.r]+")",S.openedChests.length);
   if(t.slot===null){ S.coins+= (t.pow+1)*3; }
   save(); refreshHud(); updateMap();
   document.getElementById("chestOpenView").style.display="none";
@@ -2364,6 +2390,7 @@ function rewardModal(title, art, desc){
   openModal("rewardModal");
 }
 function openExchange(){
+  track("兑换","打开兑换","星星"+S.stars);
   document.getElementById("exStars").textContent=S.stars;
   document.getElementById("exMoons").textContent=S.moons;
   document.getElementById("myToys").innerHTML = S.toys.length?
@@ -2489,6 +2516,7 @@ function startGame(){
   buildMapOnce();
   switchScreen("mapScreen");
   updateMap();
+  track("游戏","开始游戏",(HEROES[S.hero]||HEROES[0]).n);
   if(S.done.length===0){
     setTimeout(()=>toast("👉 点击第 1 关的大门，放大后「进去闯关」！"),600);
   }
