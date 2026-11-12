@@ -318,6 +318,35 @@ function track(cat, act, label, val){
     font-size:9px; background:rgba(255,255,255,.85); border-radius:6px; padding:0 4px;
     color:#4a2c10; white-space:nowrap;
   }
+  /* 赛车：交通工具形态 */
+  #player.riding{width:86px; margin:-54px 0 0 -43px; transition:left .09s linear, top .09s linear;}
+  #player.riding .nmTag{top:-13px;}
+  #player .car-wheel{transform-box:fill-box; transform-origin:50% 50%; animation:wheelSpin .6s linear infinite;}
+  #player.riding .car-wheel{animation-duration:.26s;}
+  @keyframes wheelSpin{to{transform:rotate(360deg);}}
+  /* 打招呼气泡 */
+  .bubble{
+    position:absolute; background:#fffdf7; color:#3a2a18; border:2px solid #e6c98f;
+    border-radius:12px; padding:4px 9px; font-size:11px; line-height:1.35; font-weight:bold;
+    white-space:nowrap; box-shadow:0 4px 10px rgba(0,0,0,.2);
+    opacity:0; transition:opacity .18s ease; pointer-events:none; z-index:12;
+  }
+  .bubble.show{opacity:1;}
+  .bubble::after{
+    content:""; position:absolute; left:50%; bottom:-6px; transform:translateX(-50%);
+    border:6px solid transparent; border-top-color:#fffdf7;
+  }
+  .walker .bubble{left:0; top:0; transform:translate(-50%,-100%); margin-top:-42px;}
+  #player .bubble{left:50%; bottom:100%; transform:translateX(-50%); margin-bottom:52px; border-color:#8fc8ff;}
+  /* 赛车尾气/尘土 */
+  .puff{
+    position:absolute; width:12px; height:12px; border-radius:50%; background:rgba(255,246,224,.9);
+    pointer-events:none; z-index:7; animation:puffOut .6s ease-out forwards;
+  }
+  @keyframes puffOut{
+    from{transform:scale(.5); opacity:.85;}
+    to{transform:scale(2.1) translateY(-8px); opacity:0;}
+  }
   /* 方向键方向盘 */
   #dpad{
     position:fixed; right:14px; bottom:16px; z-index:60;
@@ -421,6 +450,7 @@ function track(cat, act, label, val){
   <div class="stat">⚔️ <span id="hudPower">1</span></div>
   <div class="spacer"></div>
   <button class="btn blue small" onclick="openExchange()">🏆 兑换奖励</button>
+  <button class="btn small" id="carBtn" onclick="toggleCar()">🏎 开车</button>
   <button class="btn small" onclick="openBackpack()">🎒 背包</button>
   <button class="btn red small" onclick="resetSave()">重来</button>
 </div>
@@ -433,7 +463,7 @@ function track(cat, act, label, val){
   <div class="heroGrid" id="heroGrid"></div>
   <div style="font-size:40px;">🐉📜</div>
   <button class="btn" style="font-size:22px;" onclick="startGame()">▶ 开始冒险</button>
-  <p style="font-size:13px;">用 ↑↓←→ 或右下角方向盘，手动把奥特曼走到关口才能进门 · 进度自动保存</p>
+  <p style="font-size:13px;">用 ↑↓←→ 或右下角方向盘自由走动（哪都能去）· 点右上角「🏎 开车」坐赛车，速度快 3 倍 · 路上遇到行人小动物会跟你打招呼 · 进度自动保存</p>
 </div>
 
 <!-- 地图 -->
@@ -447,7 +477,7 @@ function track(cat, act, label, val){
     <button class="right" onclick="movePlayer(1,0)">➡</button>
     <button class="down" onclick="movePlayer(0,1)">⬇</button>
   </div>
-  <div id="mapTip">用 ↑↓←→ 或方向盘把奥特曼走到关口，然后点大门进去 · 路上的 🎁 宝箱别错过</div>
+  <div id="mapTip">↑↓←→ 自由走动（草地山坡都能去）· 点「🏎 开车」换上赛车跑得飞快 · 遇到小动物和行人会跟你打招呼 · 走到大门点进去闯关</div>
 </div>
 
 <!-- 关卡大门（放大效果） -->
@@ -752,8 +782,28 @@ function heroSVG(h,size){
     <rect x="31.5" y="25" width="5" height="14" rx="2.5" fill="${h.b}" stroke="#8a8f96"/>
   </svg>`;
 }
-const DECOS = ["🌳","🌲","🌴","🍄","🌸","🪨","🌻","⛰️","🏡","🌾","🌷","🌵"];
-const RARITY_TXT = {common:"普通", rare:"稀有", epic:"史诗", legend:"传说"};
+/* 赛车（交通工具）：奥特曼坐在里面，轮子会转 */
+function carSVG(h,size){
+  const W=size||86, H=Math.round(W*0.63);
+  const body=h&&h.b||"#e2452f";
+  return `<svg width="${W}" height="${H}" viewBox="0 0 96 60" style="vertical-align:middle;">
+    <ellipse cx="48" cy="53" rx="42" ry="4.5" fill="rgba(40,26,12,.22)"/>
+    <path d="M9 44 q-4 -2 -3 -7 q1 -6 9 -8 l13 -3 q5 -9 16 -12 q13 -3 23 5 l13 5 q10 3 10 11 q0 5 -5 5 l-70 0Z" fill="${body}" stroke="rgba(0,0,0,.28)" stroke-width="1.3"/>
+    <path d="M9 44 q-4 -2 -3 -7 q1 -6 9 -8 l13 -3 q5 -9 16 -12 l2 30Z" fill="rgba(255,255,255,.16)"/>
+    <path d="M40 33 q7 -8 17 -7 l7 1 5 7Z" fill="#cdeaff" stroke="rgba(0,0,0,.22)" stroke-width="1"/>
+    <circle cx="50" cy="23" r="6.2" fill="${body}" stroke="rgba(0,0,0,.3)" stroke-width="1"/>
+    <ellipse cx="47.6" cy="22.4" rx="2" ry="2.6" fill="#ffd34d"/>
+    <ellipse cx="52.6" cy="22.4" rx="2" ry="2.6" fill="#ffd34d"/>
+    <rect x="6" y="30" width="14" height="3.2" rx="1.4" fill="${body}" stroke="rgba(0,0,0,.25)" stroke-width=".8"/>
+    <path d="M68 26 l8 -8 h6 l-3 9Z" fill="${body}" stroke="rgba(0,0,0,.25)" stroke-width=".8"/>
+    <circle cx="50" cy="40" r="5.4" fill="#fffdf2" stroke="rgba(0,0,0,.18)" stroke-width=".8"/>
+    <text x="50" y="43" font-size="6.4" font-weight="bold" text-anchor="middle" fill="${body}">1</text>
+    <g class="car-wheel"><circle cx="26" cy="46" r="9" fill="#2f2a26"/><circle cx="26" cy="46" r="4.2" fill="#c9c4bc"/><path d="M26 39.6v3M32.4 46h-3M26 52.4v-3M19.6 46h3" stroke="#8c867e" stroke-width="1.2"/></g>
+    <g class="car-wheel"><circle cx="72" cy="46" r="9" fill="#2f2a26"/><circle cx="72" cy="46" r="4.2" fill="#c9c4bc"/><path d="M72 39.6v3M78.4 46h-3M72 52.4v-3M65.6 46h3" stroke="#8c867e" stroke-width="1.2"/></g>
+    <path d="M8 40 q-6 1 -8 4 q5 1 8 -1Z" fill="#ffd06a" opacity=".85"/>
+  </svg>`;
+}
+const DECOS = ["🌳","🌲","🌴","🍄","🌸","🪨","🌻","⛰️","🏡","🌾","🌷","🌵"];const RARITY_TXT = {common:"普通", rare:"稀有", epic:"史诗", legend:"传说"};
 
 /* ===== 手绘 SVG 角色库（人 / 动物 / 鸟），替掉 emoji 贴纸 ===== */
 function dk(hex,p){ const n=parseInt(hex.slice(1),16), f=v=>Math.round(v*(1-p));
@@ -1019,17 +1069,25 @@ function birdSVG(k){
 }
 const ANIMAL_KEYS=["rabbit","deer","sheep","goat","dog","cat","cow","chicken","duck","hedgehog","fox","turtle"];
 const BIRD_KEYS=["sparrow","dove","magpie","eagle","parrot","owl"];
+const ANIMAL_NAMES={rabbit:"小兔子",deer:"小鹿",sheep:"小绵羊",goat:"小山羊",dog:"小狗",cat:"小猫",
+  cow:"小牛",chicken:"小鸡",duck:"小鸭子",hedgehog:"小刺猬",fox:"小狐狸",turtle:"小乌龟"};
+const BIRD_NAMES={sparrow:"小麻雀",dove:"小白鸽",magpie:"喜鹊",eagle:"老鹰",parrot:"鹦鹉",owl:"猫头鹰"};
+const PERSON_NAMES=["小书童","赶集的阿婆","挑担子的大叔","扎辫子的小姑娘","赶路的书生","卖糖葫芦的","守城门的老兵","背竹篓的农人"];
+const HELLO_PERSON=["你好呀，奥特曼！","哎哟，是奥特曼大人！","你好！前面就是关口啦","小朋友你好～路上小心"];
+const HELLO_ANIMAL=["你好呀！","嗨～我是","你要去闯关吗？","见到你真高兴！"];
+const HELLO_BIRD=["啾啾～你好！","叽叽喳喳！","咕咕，你好呀"];
 function figureFor(kind){
   if(kind==="bird"){
     const k=BIRD_KEYS[Math.floor(Math.random()*BIRD_KEYS.length)];
-    return {html:`<svg width="27" height="27" viewBox="0 0 40 40">${birdSVG(k)}</svg>`, step:.34};
+    return {html:`<svg width="27" height="27" viewBox="0 0 40 40">${birdSVG(k)}</svg>`, step:.34, name:BIRD_NAMES[k]||"小鸟", kind:"bird"};
   }
   if(kind==="person"){
     const look=LOOKS[Math.floor(Math.random()*LOOKS.length)];
-    return {html:`<svg width="34" height="45" viewBox="0 0 44 58">${personSVG(look)}</svg>`, step:.62};
+    const nm=PERSON_NAMES[Math.floor(Math.random()*PERSON_NAMES.length)];
+    return {html:`<svg width="34" height="45" viewBox="0 0 44 58">${personSVG(look)}</svg>`, step:.62, name:nm, kind:"person"};
   }
   const k=ANIMAL_KEYS[Math.floor(Math.random()*ANIMAL_KEYS.length)];
-  return {html:`<svg width="38" height="50" viewBox="0 0 44 58">${animalSVG(k)}</svg>`, step:.5};
+  return {html:`<svg width="38" height="50" viewBox="0 0 44 58">${animalSVG(k)}</svg>`, step:.5, name:ANIMAL_NAMES[k]||"小动物", kind:"animal"};
 }
 
 const WALKERS=[];
@@ -1059,11 +1117,12 @@ function spawnWalkers(){
     inner.appendChild(el);
     const w={
       el, kind,
+      name: fig.name, figKind: fig.kind,
       x: rand(120,PATH_SPAN-180),
       y: kind==="bird" ? rand(110,420) : rand(420,830),
       dir: Math.random()<.5?1:-1,
       speed: kind==="bird" ? rand(50,85) : (kind==="person"? rand(22,40) : rand(14,34)),
-      wait: rand(0,2.5), phase: rand(0,6.28), tx:null, ty:null, still:false
+      wait: rand(0,2.5), phase: rand(0,6.28), tx:null, ty:null, still:false, talkAt:0
     };
     // 走得越快，迈步越急
     el.style.setProperty("--step", (0.78 - Math.min(.34, w.speed/130)).toFixed(2)+"s");
@@ -1072,7 +1131,36 @@ function spawnWalkers(){
     posWalker(w,0);
   }
 }
-let walkerRAF=null, walkerLast=0;
+let walkerRAF=null, walkerLast=0, globalTalkAt=0;
+/* 头顶气泡：说一句话就消失；flip=真 时抵消行人自身的左右翻转，免得文字镜像 */
+function bubbleOn(host,text,ms,flip){
+  if(!host) return;
+  let b=host.querySelector(":scope > .bubble");
+  if(!b){ b=document.createElement("div"); b.className="bubble"; host.appendChild(b); }
+  b.style.transform = flip ? "translate(-50%,-100%) scaleX(-1)" : "";
+  b.textContent=text;
+  requestAnimationFrame(()=>b.classList.add("show"));
+  if(b._t) clearTimeout(b._t);
+  b._t=setTimeout(()=>{ b.classList.remove("show"); setTimeout(()=>b.remove(),300); }, ms||2100);
+}
+/* 走到行人/小动物旁边：它先问好，奥特曼回一句 */
+function greetWalker(w){
+  const now=Date.now();
+  if(now-globalTalkAt<2600) return;
+  globalTalkAt=now; w.talkAt=now;
+  w.dir = (S.px>w.x) ? 1 : -1;             // 转过来面对奥特曼
+  w.wait = Math.max(w.wait, 1.5);          // 停一下，专心聊天
+  w.still = true; w.el.classList.add("still");
+  const hero=(HEROES[S.hero]||HEROES[0]).n;
+  let said;
+  if(w.kind==="bird") said = HELLO_BIRD[Math.floor(Math.random()*HELLO_BIRD.length)];
+  else if(w.kind==="animal") said = "你好呀，"+hero+"！";
+  else said = HELLO_PERSON[Math.floor(Math.random()*HELLO_PERSON.length)];
+  bubbleOn(w.el, w.name+"： "+said, 2000, w.dir<0);
+  setTimeout(()=>{
+    bubbleOn(document.getElementById("player"), "你好呀，"+w.name+"！我这就去闯关～", 1900);
+  }, 850);
+}
 function startWalkers(){
   if(walkerRAF) return;
   walkerLast=performance.now();
@@ -1080,7 +1168,13 @@ function startWalkers(){
     const dt=Math.min(0.05,(t-walkerLast)/1000); walkerLast=t;
     const onMap=document.getElementById("mapScreen").classList.contains("active");
     if(onMap){
+      const haveP = S.px!=null && S.py!=null;
       WALKERS.forEach(w=>{
+        // 靠近就打招呼（同一只 14 秒内只打一次）
+        if(haveP && Date.now()-(w.talkAt||0)>14000 &&
+           Math.hypot(w.x-S.px, w.y-S.py)<82){
+          greetWalker(w);
+        }
         if(w.wait>0){
           w.wait-=dt;
           if(!w.still){ w.still=true; w.el.classList.add("still"); }  // 站住：不摆腿，只呼吸
@@ -1205,7 +1299,7 @@ const SAVE_KEY = "poemAdventureSave_v1";
 let S = loadSave();
 function loadSave(){
   try{ const raw = localStorage.getItem(SAVE_KEY); if(raw) return JSON.parse(raw); }catch(e){}
-  return {stars:0, moons:0, toys:[], coins:0, done:[], openedChests:[], inv:[], equip:{head:null,body:null,feet:null,hand:null,hand2:null,mount:null}, cur:0, hero:0, px:null, py:null};
+  return {stars:0, moons:0, toys:[], coins:0, done:[], openedChests:[], inv:[], equip:{head:null,body:null,feet:null,hand:null,hand2:null,mount:null}, cur:0, hero:0, px:null, py:null, car:false};
 }
 function save(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(S)); }catch(e){} }
 function totalPower(){
@@ -2026,28 +2120,30 @@ function clearMarks(){
 }
 
 /* ---------- 语音识别闯关 ---------- */
+let challengeStarting=false;
 function startChallenge(){
-  if(curLevel<0) return;
+  if(curLevel<0 || challengeStarting) return;
+  challengeStarting=true;
   stopSpeak();
   clearMarks();
   renderScroll();
   matchedSet=new Set();
   heardFinal=""; heardInterim="";
-  showRecordingPanel("🎤 正在检查麦克风……（弹窗请点「允许」）");
-  // 先短检麦克风（1.2 秒音量条）→ 释放 → 再开识别：
-  // 同时占着音频流和识别会导致 Chrome 抢麦、识别收不到声音
-  if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
-    navigator.mediaDevices.getUserMedia({audio:true}).then(stream=>{
-      micStream=stream;
-      startMicMeter(stream);
-      setMicStatus("✅ 麦克风正常（音量条在动=听得到你）");
-      setTimeout(()=>{ stopMicMeter(); beginRecognition(); }, 1200);
-    }).catch(err=>{
-      challengeActive=false;
-      showRecordingPanel("❌ 麦克风打不开（"+(err.name||"错误")+"）→ 点地址栏 🔒 把麦克风改成「允许」后刷新，或用「家长确认通过」");
+  showRecordingPanel("🎤 正在打开麦克风……");
+  // 不再预先 getUserMedia 再释放：
+  // 那样会让浏览器弹两次授权（一次给 getUserMedia、一次给语音识别），
+  // 而且两条音频通道抢麦，点了允许也听不到声音。
+  // 现在只让语音识别自己去申请，整个浏览器只会弹一次。
+  if(navigator.permissions && navigator.permissions.query){
+    navigator.permissions.query({name:"microphone"}).then(st=>{
+      if(st.state==="granted") showRecordingPanel("🎤 正在听你读……请大声背出来！");
+      else if(st.state==="denied") showRecordingPanel("❌ 麦克风被禁止了 → 点地址栏 🔒 把麦克风改成「允许」再刷新，或用「家长确认通过」");
+      else showRecordingPanel("🎤 请在弹出的提示里点「允许」（只需一次），然后大声读诗");
+    }).catch(()=>{}).then(()=>{
+      setTimeout(()=>{ challengeStarting=false; beginRecognition(); }, 300);
     });
   }else{
-    beginRecognition();
+    setTimeout(()=>{ challengeStarting=false; beginRecognition(); }, 300);
   }
 }
 function beginRecognition(){
@@ -2224,7 +2320,7 @@ async function checkMicPermission(){
       const st=await navigator.permissions.query({name:"microphone"});
       if(st.state==="granted") setMicStatus("🎤 麦克风权限：已允许");
       else if(st.state==="denied") setMicStatus("🎤 麦克风权限：已被拒绝 — 点地址栏 🔒 图标改回「允许」后刷新");
-      else setMicStatus("🎤 麦克风权限：未授权 — 点「我来挑战」或「麦克风检测」时会弹出询问，请点允许");
+      else setMicStatus("🎤 麦克风权限：未授权 — 点「我来挑战」时会弹一次询问，点「允许」即可，之后不再弹");
     }else{
       setMicStatus("🎤 麦克风权限：无法查询（用 Chrome 打开更稳妥）");
     }
@@ -2535,32 +2631,25 @@ function createPlayer(){
   if(document.getElementById("player")) return;
   const inner=document.getElementById("mapInner");
   const p=document.createElement("div"); p.id="player";
-  const h=HEROES[S.hero]||HEROES[0];
-  p.innerHTML=heroSVG(h,44)+`<div class="nmTag">${h.n}</div>`;
   inner.appendChild(p);
-  if(S.px==null){ const pos=nodePos(S.cur); const c=clampToRoad(pos.x,pos.y); S.px=c.x; S.py=c.y; save(); }
-  else { const c=clampToRoad(S.px,S.py); S.px=c.x; S.py=c.y; }
-  placePlayer();
+  if(S.px==null){ const pos=nodePos(S.cur); S.px=pos.x; S.py=pos.y; save(); }
+  p.style.left=S.px+"px"; p.style.top=S.py+"px";
+  updatePlayerLook();
 }
 function placePlayer(){
   const p=document.getElementById("player");
   if(p){ p.style.left=S.px+"px"; p.style.top=S.py+"px"; }
 }
-let roadHintAt=0, summitSeen=false;
+let summitSeen=false;
 function movePlayer(dx,dy){
   if(!document.getElementById("mapScreen").classList.contains("active")) return;
-  const STEP=36;
-  let tx=Math.max(40, Math.min(MAP_W-70, S.px+dx*STEP));
-  let ty=Math.max(90, Math.min(960, S.py+dy*STEP));
-  const c=clampToRoad(tx,ty);
-  const moved=Math.hypot(c.x-S.px, c.y-S.py);
-  S.px=c.x; S.py=c.y;
+  const STEP = S.car ? 108 : 36;             // 赛车速度整整 3 倍
+  const tx = Math.max(30, Math.min(MAP_W-40, S.px+dx*STEP));
+  const ty = Math.max(80, Math.min(950, S.py+dy*STEP));
+  const moved = Math.hypot(tx-S.px, ty-S.py);
+  S.px=tx; S.py=ty;
   placePlayer(); save(); ensureVisible();
-  // 完全被路挡住时给一次提示（4 秒内只提示一次）
-  if(moved<4 && (dx||dy) && Date.now()-roadHintAt>4000){
-    roadHintAt=Date.now();
-    toast("只能沿着路走哦～ 顺着大路、桥和山道前进");
-  }
+  if(S.car && moved>10 && Math.random()<.65) puffAt(S.px, S.py);   // 尾气
   // 登上对岸山顶
   if(!summitSeen && S.px>MTN.cx-150 && S.py<MTN.peakY+110){
     summitSeen=true;
@@ -2583,15 +2672,36 @@ function initKeyboard(){
     const k=e.key.length===1? e.key.toLowerCase() : e.key;
     const map={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1],a:[-1,0],d:[1,0],w:[0,-1],s:[0,1]};
     const m=map[k];
-    if(m){ e.preventDefault(); movePlayer(m[0],m[1]); }
+    if(m){ e.preventDefault(); movePlayer(m[0],m[1]); return; }
+    if(k===" "||k==="e"){ e.preventDefault(); toggleCar(); }
   });
 }
 function updatePlayerLook(){
   const p=document.getElementById("player");
   if(p){
     const h=HEROES[S.hero]||HEROES[0];
-    p.innerHTML=heroSVG(h,44)+`<div class="nmTag">${h.n}</div>`;
+    if(S.car){
+      p.classList.add("riding");
+      p.innerHTML=carSVG(h,86)+`<div class="nmTag">🏎 ${h.n}</div>`;
+    }else{
+      p.classList.remove("riding");
+      p.innerHTML=heroSVG(h,44)+`<div class="nmTag">${h.n}</div>`;
+    }
   }
+  const b=document.getElementById("carBtn");
+  if(b) b.textContent = S.car? "🚶 下车" : "🏎 开车";
+}
+/* 上/下车：赛车速度 3 倍，并且可以开去任何地方 */
+function toggleCar(force){
+  S.car = (typeof force==="boolean")? force : !S.car;
+  save(); updatePlayerLook();
+  toast(S.car? "🏎 开上赛车啦！速度快 3 倍，想去哪就去哪" : "🚶 下车了，慢慢逛～");
+}
+function puffAt(x,y){
+  const inner=document.getElementById("mapInner"); if(!inner) return;
+  const d=document.createElement("div"); d.className="puff";
+  d.style.left=(x-16)+"px"; d.style.top=(y-6)+"px";
+  inner.appendChild(d); setTimeout(()=>d.remove(),650);
 }
 /* ---------- 选奥特曼 ---------- */
 function renderHeroPicker(){
