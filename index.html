@@ -665,7 +665,7 @@ function track(cat, act, label, val){
 const POEMS = [
   // 一年级上（6）
   {g:"一年级上", t:"咏鹅", a:"唐·骆宾王", l:["鹅，鹅，鹅，","曲项向天歌。","白毛浮绿水，","红掌拨清波。"]},
-  {g:"一年级上", t:"江南", a:"汉乐府", l:["江南可采莲，","莲叶何田田。","鱼戏莲叶间。"]},
+  {g:"一年级上", t:"江南", a:"汉乐府", l:["江南可采莲，","莲叶何田田。","鱼戏莲叶间。","鱼戏莲叶东，","鱼戏莲叶西，","鱼戏莲叶南，","鱼戏莲叶北。"]},
   {g:"一年级上", t:"画", a:"唐·王维", l:["远看山有色，","近听水无声。","春去花还在，","人来鸟不惊。"]},
   {g:"一年级上", t:"悯农（其二）", a:"唐·李绅", l:["锄禾日当午，","汗滴禾下土。","谁知盘中餐，","粒粒皆辛苦。"]},
   {g:"一年级上", t:"古朗月行（节选）", a:"唐·李白", l:["小时不识月，","呼作白玉盘。","又疑瑶台镜，","飞在青云端。"]},
@@ -2312,14 +2312,22 @@ function lcsSet(a,b){
 function paintChars(heardText){
   const p=POEMS[curLevel]; if(!p) return {hit:0,total:0};
   const heard=normCn(heardText);
-  let hit=0,total=0;
+  // 全诗展平成一串，只做一次 LCS：同一个字不会被两句重复算（"莲"字多的情况才准）
+  const flat=[], slot=[];
   p.l.forEach((line,li)=>{
-    const need=normCn(line);
-    total+=need.length;
+    normCn(line).split("").forEach((ch,ci)=>{ flat.push(ch); slot.push([li,ci]); });
+  });
+  const total=flat.length;
+  const matchedIdx=lcsSet(flat.join(""), heard);
+  const fresh={};                 // li -> 本次新说对的字
+  matchedIdx.forEach(k=>{
+    const [li,ci]=slot[k];
     if(!charMatched[li]) charMatched[li]=new Set();
-    const set=charMatched[li];
-    const prev=new Set(set);
-    lcsSet(need,heard).forEach(i=>set.add(i));   // 只增不减：读过的字不会因为识别抖动又变回去
+    if(!charMatched[li].has(ci)){ charMatched[li].add(ci); (fresh[li]=fresh[li]||[]).push(ci); }
+  });
+  let hit=0;
+  p.l.forEach((line,li)=>{
+    const set=charMatched[li]||new Set();
     hit+=set.size;
     const el=document.getElementById("line"+li);
     if(!el) return;
@@ -2329,7 +2337,7 @@ function paintChars(heardText){
       const ok=set.has(i);
       sp.classList.toggle("ok", ok);
       sp.classList.remove("hot");
-      if(ok && !prev.has(i)) newly.push(sp);
+      if(ok && (fresh[li]||[]).includes(i)) newly.push(sp);
     });
     // 刚说对的字：先黄底跳一下，再回落成绿色，让娃看见"我刚刚读到这里了"
     if(newly.length && !el.classList.contains("matched")){
