@@ -202,7 +202,7 @@ function track(cat, act, label, val){
   #hpWrap{position:absolute; top:-12px; left:50%; transform:translateX(-50%); width:clamp(96px,21vw,134px); z-index:3;}
   #hpBar{height:12px; border-radius:7px; background:rgba(0,0,0,.6); border:2px solid rgba(255,226,170,.85); overflow:hidden; box-shadow:0 2px 6px rgba(0,0,0,.45);}
   #hpFill{height:100%; width:100%; border-radius:5px; background:linear-gradient(90deg,#e74c3c,#f1c40f 55%,#2ecc71); transition:width .45s cubic-bezier(.2,.8,.3,1);}
-  #hpText{text-align:center; font-size:10px; font-weight:700; color:#ffe0a0; margin-top:2px; text-shadow:0 1px 3px #000;}
+  #hpText{text-align:center; font-size:10px; font-weight:700; color:#ffe0a0; margin-top:2px; text-shadow:0 1px 3px #000; white-space:nowrap;}
   /* 攻击光束 */
   #beamFx{position:absolute; z-index:5; pointer-events:none; left:0; right:0; bottom:64px; height:16px; opacity:0;}
   #beamFx .core{
@@ -219,6 +219,24 @@ function track(cat, act, label, val){
   @keyframes heroAttack{0%{transform:translateX(0)} 28%{transform:translateX(24px) scale(1.09)} 62%{transform:translateX(17px)} 100%{transform:translateX(0)}}
   #monster.hurt{animation:monsterHurt .42s ease-out;}
   @keyframes monsterHurt{0%{transform:translateX(0)} 20%{transform:translateX(15px) rotate(9deg); filter:brightness(2)} 50%{transform:translateX(-9px) rotate(-6deg)} 100%{transform:translateX(0)}}
+  /* 怪兽挥武器反击：整个怪兽前冲；武器本身单独挥砍（SVG 内的 .weaponArm） */
+  #monster.swing{animation:monsterSwing .5s ease-in-out;}
+  @keyframes monsterSwing{0%{transform:translateX(0)} 30%{transform:translateX(-20px) rotate(-8deg)} 55%{transform:translateX(10px) rotate(6deg)} 100%{transform:translateX(0)}}
+  #monster .weaponArm{transform-origin:0 44px; transform-box:view-box;}
+  #monster.swing .weaponArm{animation:weaponSlash .5s ease-in-out;}
+  @keyframes weaponSlash{0%{transform:rotate(0)} 35%{transform:rotate(55deg)} 65%{transform:rotate(-30deg)} 100%{transform:rotate(0)}}
+  /* 奥特曼格挡：后仰挡住反击 */
+  #heroSvg.guard{animation:heroGuard .5s ease-out;}
+  @keyframes heroGuard{0%{transform:translateX(0)} 25%{transform:translateX(-14px) scale(.96)} 60%{transform:translateX(-8px)} 100%{transform:translateX(0)}}
+  /* 怪兽的红色反击光束：从右往左射向奥特曼 */
+  #counterFx{position:absolute; z-index:5; pointer-events:none; left:0; right:0; bottom:64px; height:16px; opacity:0;}
+  #counterFx .core{
+    position:absolute; left:30%; right:28%; top:50%; height:9px; transform:translateY(-50%) scaleX(0); transform-origin:right center;
+    background:linear-gradient(270deg,#fff 0%,#ffd6c2 38%,#ff6b3d 68%,rgba(255,107,61,0) 100%);
+    border-radius:9px; box-shadow:0 0 14px 4px rgba(255,140,90,.95), 0 0 30px 11px rgba(255,80,40,.5);
+  }
+  #counterFx.fire .core{animation:counterFire .5s ease-out forwards;}
+  @keyframes counterFire{0%{transform:translateY(-50%) scaleX(0); opacity:1;} 22%{transform:translateY(-50%) scaleX(1); opacity:1;} 82%{opacity:1;} 100%{transform:translateY(-50%) scaleX(1); opacity:0;}}
   #scroll{
     position:relative; background:linear-gradient(180deg,#f5d67b,#e9b83c);
     border-radius:8px; padding:16px 20px 14px; max-width:640px; width:100%;
@@ -607,10 +625,11 @@ function track(cat, act, label, val){
         <div id="monster"></div>
         <div id="hpWrap">
           <div id="hpBar"><div id="hpFill"></div></div>
-          <div id="hpText">守关怪物 · 举着金卷轴</div>
+          <div id="hpText">守关怪物 👑</div>
         </div>
       </div>
       <div id="beamFx"><div class="core"></div></div>
+      <div id="counterFx"><div class="core"></div></div>
     </div>
     <div id="scroll">
       <div id="scrollTitle"></div>
@@ -919,23 +938,53 @@ function monsterSVG(i,size){
     mouth+=`<path d="M21 55 l3 6 3 -5Z M39 55 l-3 6 -3 -5Z" fill="#fff"/>`;
   }
   if(k==="boar") mouth+=`<ellipse cx="30" cy="57" rx="4" ry="3" fill="#d98880" stroke="${dark}" stroke-width=".8"/>`;
-  return `<svg width="${size}" height="${Math.round(size*1.02)}" viewBox="-8 0 76 78" style="vertical-align:middle;">
+  /* 左手武器：按怪兽类型换造型，握点在左手末端 */
+  const shaft="#6b4423", steel="#c9d2dc", steelD="#5f6a76";
+  let weapon="";
+  if(k==="ogre"||k==="dragon"){ // 狼牙棒
+    weapon=`<rect x="-1.6" y="-2" width="3.2" height="24" fill="${shaft}" stroke="#4a3016" stroke-width=".6"/>
+      <circle cx="0" cy="-7" r="6.5" fill="${steel}" stroke="${steelD}" stroke-width="1.4"/>
+      <path d="M0 -15 l2.6 -4 -5.2 0Z M7 -9 l4.4 -2 0 5Z M7 -3 l4 3 -3.5 3Z M-7 -9 l-4.4 -2 0 5Z M-7 -3 l-4 3 3.5 3Z" fill="${steel}" stroke="${steelD}" stroke-width=".7"/>`;
+  }else if(k==="boar"||k==="wolf"){ // 斧头
+    weapon=`<rect x="-1.6" y="-3" width="3.2" height="26" fill="${shaft}" stroke="#4a3016" stroke-width=".6"/>
+      <path d="M0.8 -24 q11 -1 12 9 q-7 -4 -12 -2Z" fill="${steel}" stroke="${steelD}" stroke-width="1.3"/>
+      <path d="M-0.8 -24 q-5 -1 -6 3 l6 1Z" fill="${steelD}"/>`;
+  }else if(k==="fox"||k==="bat"){ // 弯刀
+    weapon=`<rect x="-1.5" y="-4" width="3" height="9" rx="1" fill="${shaft}" stroke="#4a3016" stroke-width=".6"/>
+      <rect x="-5" y="-6" width="10" height="2" rx="1" fill="#d4ac0d"/>
+      <path d="M-1 -6 q11 -9 9 -25 q-1 13 -11 19Z" fill="${steel}" stroke="${steelD}" stroke-width="1.2"/>`;
+  }else if(k==="octo"||k==="scorp"){ // 三叉戟
+    weapon=`<rect x="-1.5" y="-4" width="3" height="27" fill="${shaft}" stroke="#4a3016" stroke-width=".6"/>
+      <path d="M-9 -31 v9 M0 -34 v12 M9 -31 v9 M-9 -31 q9 -7 18 0" stroke="${steel}" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+      <path d="M0 -34 l-2.5 -5 5 0Z" fill="${steel}" stroke="${steelD}" stroke-width=".7"/>`;
+  }else{ // 大锤（蜘蛛/幽灵/睡怪）
+    weapon=`<rect x="-1.6" y="-3" width="3.2" height="25" fill="${shaft}" stroke="#4a3016" stroke-width=".6"/>
+      <rect x="-8.5" y="-15" width="17" height="11" rx="2" fill="${steel}" stroke="${steelD}" stroke-width="1.4"/>
+      <rect x="-8.5" y="-11" width="17" height="2.4" fill="${steelD}" opacity=".7"/>`;
+  }
+  return `<svg width="${size}" height="${Math.round(size*1.02)}" viewBox="-8 -4 76 82" style="vertical-align:middle;">
     <ellipse cx="30" cy="75" rx="26" ry="4.5" fill="rgba(0,0,0,.32)"/>
     ${extra}
     <path d="M12 60 q-6 6 -2 12 l7 -2Z M48 60 q6 6 2 12 l-7 -2Z" fill="${L.d}" stroke="${dark}" stroke-width="1"/>
+    <path d="M9 71.5 h10 M41 71.5 h10" stroke="${dark}" stroke-width="2" stroke-linecap="round" opacity=".7"/>
     <ellipse cx="30" cy="56" rx="20" ry="17" fill="${L.b}" stroke="${dark}" stroke-width="1.6"/>
     <ellipse cx="30" cy="60" rx="12" ry="10" fill="${L.horn}" opacity=".45"/>
     <circle cx="30" cy="40" r="22" fill="${L.b}" stroke="${dark}" stroke-width="1.8"/>
     <ellipse cx="30" cy="46" rx="15" ry="11" fill="${dk2(L.b)}" opacity=".35"/>
     ${eyes}${mouth}
     ${k==="ghost"?'<path d="M12 70 q4 8 8 0 q4 8 8 0 q4 8 8 0 q4 8 8 0" stroke="'+L.d+'" stroke-width="2" fill="none"/>':""}
-    <path d="M10 60 q-9 -3 -10 -14" stroke="${L.b}" stroke-width="6.5" fill="none" stroke-linecap="round"/>
-    <path d="M50 60 q9 -3 10 -14" stroke="${L.b}" stroke-width="6.5" fill="none" stroke-linecap="round"/>
-    <g transform="translate(60,46) rotate(10)">
-      <rect x="-3.5" y="-13" width="7" height="18" rx="2" fill="#f7dc6f" stroke="#b7950b" stroke-width="1"/>
-      <rect x="-5.5" y="-15" width="11" height="3.4" rx="1.7" fill="#d4ac0d"/>
-      <rect x="-5.5" y="2" width="11" height="3.4" rx="1.7" fill="#d4ac0d"/>
-      <path d="M-1 -9 h2 M-1 -5 h2" stroke="#b7950b" stroke-width=".9"/>
+    /* 左手（画面左侧）：伸出去握武器 */
+    <path d="M11 58 q-9 -3 -11 -14" stroke="${L.b}" stroke-width="6.5" fill="none" stroke-linecap="round"/>
+    <g class="weaponArm" transform="translate(0,44) rotate(-16)">${weapon}</g>
+    <circle cx="0" cy="44" r="3.2" fill="${L.b}" stroke="${dark}" stroke-width=".8"/>
+    /* 右手（画面右侧）：高举金色卷轴过头顶，卷轴已缩小 */
+    <path d="M49 58 q11 -4 12 -40" stroke="${L.b}" stroke-width="6" fill="none" stroke-linecap="round"/>
+    <circle cx="61" cy="18" r="3.2" fill="${L.b}" stroke="${dark}" stroke-width=".8"/>
+    <g transform="translate(61,16) rotate(8)">
+      <rect x="-2.6" y="-13" width="5.2" height="15" rx="1.4" fill="#f7dc6f" stroke="#b7950b" stroke-width=".9"/>
+      <rect x="-4" y="-15" width="8" height="3" rx="1.5" fill="#d4ac0d"/>
+      <rect x="-4" y="0" width="8" height="3" rx="1.5" fill="#d4ac0d"/>
+      <path d="M-0.8 -10 h1.6 M-0.8 -6 h1.6" stroke="#b7950b" stroke-width=".8"/>
     </g>
   </svg>`;
 }
@@ -2387,7 +2436,7 @@ let curLevel=-1;
 let readChainActive=false, challengeActive=false, matchedSet=new Set(), rec=null, recRestartTimer=null;
 let heardFinal="", heardInterim="", micStream=null, micCtx=null, micRAF=null;
 let charMatched={};   // 每句已说对的字序号（逐字高亮的状态）
-let battleLastHit=0, battleLastStrike=0;  // 出拳节流：读对字数增加且隔够时间才打一拳
+let battleLastHit=0, battleLastStrike=0, battleExchange=0;  // 出拳节流 + 对打回合计数
 
 /* 音量条：让娃直观看到"麦克风听到我了" */
 function startMicMeter(stream){
@@ -2500,7 +2549,7 @@ let challengeStarting=false;
 function startChallenge(){
   if(curLevel<0 || challengeStarting) return;
   challengeStarting=true;
-  battleLastHit=0; battleLastStrike=0;
+  battleLastHit=0; battleLastStrike=0; battleExchange=0;
   battleCharge();
   stopSpeak();
   clearMarks();
@@ -2797,15 +2846,16 @@ function startLevel(i){
   const p=POEMS[i];
   /* 战斗舞台：左边玩家奥特曼（带装备），右边守关怪兽（手绘 SVG） */
   const mEl=document.getElementById("monster");
-  mEl.classList.remove("dying","hurt");
+  mEl.classList.remove("dying","hurt","swing");
   mEl.innerHTML = monsterSVG(i);
   const heroEl=document.getElementById("heroSvg");
-  heroEl.classList.remove("attack","charge");
+  heroEl.classList.remove("attack","charge","guard");
   heroEl.innerHTML = heroSVG(HEROES[S.hero]||HEROES[0], 96);
   const hpFill=document.getElementById("hpFill");
   if(hpFill) hpFill.style.width="100%";
-  const beam=document.getElementById("beamFx");
+  const beam=document.getElementById("beamFx"), ctr=document.getElementById("counterFx");
   if(beam) beam.classList.remove("fire");
+  if(ctr) ctr.classList.remove("fire");
   document.getElementById("levelName").textContent = "第 "+(i+1)+" 关 · 《"+p.t+"》 · "+p.g;
   document.getElementById("scrollTitle").textContent="《"+p.t+"》";
   document.getElementById("scrollAuthor").textContent=p.a;
@@ -2838,30 +2888,44 @@ function battleCharge(){
   const h=document.getElementById("heroSvg");
   if(h){ h.classList.remove("attack"); h.classList.add("charge"); }
 }
+function replay(el,cls,ms){ if(el){ el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); setTimeout(()=>el.classList.remove(cls),ms); } }
+/* 怪兽挥武器反击 + 红色光束 + 奥特曼格挡（只热闹，不掉血，不让娃有挫败感） */
+function monsterCounter(){
+  replay(document.getElementById("monster"),"swing",500);
+  replay(document.getElementById("counterFx"),"fire",520);
+  setTimeout(()=>replay(document.getElementById("heroSvg"),"guard",500),120);
+}
 function battleStrike(hitRatio){
-  /* 读对字 → 奥特曼出拳 + 光束 + 怪兽受击 + 血条随进度下降 */
-  const h=document.getElementById("heroSvg"), m=document.getElementById("monster"), beam=document.getElementById("beamFx");
-  if(h){ h.classList.remove("charge","attack"); void h.offsetWidth; h.classList.add("attack");
-    setTimeout(()=>h.classList.remove("attack"),520); }
-  if(m){ m.classList.remove("hurt"); void m.offsetWidth; m.classList.add("hurt");
-    setTimeout(()=>m.classList.remove("hurt"),440); }
-  if(beam){ beam.classList.remove("fire"); void beam.offsetWidth; beam.classList.add("fire");
-    setTimeout(()=>beam.classList.remove("fire"),560); }
+  /* 奥特曼出拳 + 蓝色光束打怪 + 怪兽受击 + 血条下降；隔一会儿怪兽挥武器反击 */
+  replay(document.getElementById("heroSvg"),"attack",520);
+  const m=document.getElementById("monster");
+  replay(m,"hurt",440);
+  replay(document.getElementById("beamFx"),"fire",560);
   const hp=document.getElementById("hpFill");
   if(hp) hp.style.width=Math.max(0,100-Math.round(hitRatio*100))+"%";
+  /* 不是每拳都还手：约隔一次反击一次，且别和出拳挨太近 */
+  battleExchange++;
+  if(battleExchange%2===0) setTimeout(monsterCounter, 560);
 }
 function battleKO(){
-  /* 过关大招：连打三拳后怪兽倒下 */
+  /* 过关：你来我往对打三回合，最后一拳把怪兽打倒 */
   const h=document.getElementById("heroSvg"), beam=document.getElementById("beamFx");
   if(h) h.classList.remove("charge");
   let n=0;
   const volley=setInterval(()=>{
-    if(h){ h.classList.remove("attack"); void h.offsetWidth; h.classList.add("attack"); }
-    if(beam){ beam.classList.remove("fire"); void beam.offsetWidth; beam.classList.add("fire"); }
+    if(h){ h.classList.remove("guard"); replay(h,"attack",480); }
+    replay(beam,"fire",520);
     const m=document.getElementById("monster");
-    if(m){ m.classList.remove("hurt"); void m.offsetWidth; m.classList.add("hurt"); }
-    if(++n>=3){ clearInterval(volley); const hp=document.getElementById("hpFill"); if(hp) hp.style.width="0%"; }
-  },260);
+    if(n<2){ // 前两回合怪兽还手
+      replay(m,"hurt",440);
+      setTimeout(()=>{ replay(m,"swing",480); replay(document.getElementById("counterFx"),"fire",500);
+        setTimeout(()=>replay(h,"guard",480),100); }, 300);
+    }else{ // 最后一回合：重击，怪兽倒地
+      replay(m,"hurt",500);
+      const hp=document.getElementById("hpFill"); if(hp) hp.style.width="0%";
+    }
+    if(++n>=3) clearInterval(volley);
+  }, 780);
 }
 function killMonster(){
   const m=document.getElementById("monster");
