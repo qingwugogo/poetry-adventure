@@ -2652,17 +2652,28 @@ function clearMarks(){
 
 /* ---------- 离线实时识别：sherpa-onnx 流式 zipformer（WASM 在本机跑，声音不出本机） ---------- */
 /* 模型 streaming-zipformer-zh-14M int8 ≈25MB，边说边出字；音近容错仍由拼音表负责 */
+/* 国内直连 GitHub Pages 只有 ~27KB/s，所以模型和 wasm 优先走 jsDelivr CDN，再退加速代理，最后才同源 */
 const SHERPA_DIR = "./assets/sherpa/";
-const SHERPA_FILES = {
-  encoder: "encoder-epoch-99-avg-1.int8.onnx",
-  decoder: "decoder-epoch-99-avg-1.int8.onnx",
-  joiner:  "joiner-epoch-99-avg-1.int8.onnx",
-  tokens:  "tokens.txt"
+const SHERPA_BASES = [
+  "https://cdn.jsdelivr.net/gh/qingwugogo/poetry-adventure@main/",
+  "https://ghfast.top/https://raw.githubusercontent.com/qingwugogo/poetry-adventure/main/",
+  "./"
+];
+const SHERPA_MODEL_FILES = {
+  encoder: [
+    "assets/sherpa/model/encoder-epoch-99-avg-1.int8.onnx.p1",
+    "assets/sherpa/model/encoder-epoch-99-avg-1.int8.onnx.p2",
+    "assets/sherpa/model/encoder-epoch-99-avg-1.int8.onnx.p3"
+  ],
+  decoder: ["assets/sherpa/model/decoder-epoch-99-avg-1.int8.onnx"],
+  joiner:  ["assets/sherpa/model/joiner-epoch-99-avg-1.int8.onnx"],
+  tokens:  ["assets/sherpa/model/tokens.txt"]
 };
-const SHERPA_TOTAL = 25305928;       /* 四个模型文件合计字节，用于算下载进度 */
-const SHERPA_CACHE = "sherpa-zh-14m-v1";
+const SHERPA_WASM = "assets/sherpa/prebuilt/asr.wasm";
+const SHERPA_TOTAL = 13788938 + 21621684 + 1888682 + 1795562 + 48697;   /* wasm+模型字节，算进度用 */
+const SHERPA_CACHE = "sherpa-zh-14m-v2";
 let asrMode="native";                 /* native=浏览器原生实时识别；local=离线流式识别 */
-let sherpaRec=null, sherpaStream=null, sherpaLoading=null;
+let sherpaRec=null, sherpaStream=null, sherpaLoading=null, sherpaBase=null;
 let localStream=null, localBusy=false;
 let liveCtx=null, liveSrc=null, liveNode=null, liveMute=null;
 let liveCommitted="", livePaintAt=0;
@@ -2672,52 +2683,74 @@ function setWhisperInfo(t,pct){
   const fill=document.getElementById("whisperProgFill");
   if(fill && typeof pct==="number") fill.style.width=Math.max(0,Math.min(100,pct))+"%";
 }
-/* 模型文件下载：优先浏览器 Cache 存储（第二次秒开），未命中再走网络并写入缓存 */
-async function fetchModelFile(name, onBytes){
-  const url=SHERPA_DIR+"model/"+name;
+/* 带进度下载单个文件：内存 Cache → jsDelivr → 加速代理 → 同源，前一个失败自动换下一个 */
+async function fetchSherpaFile(rel, onBytes){
+  const cacheKey="sherpa:"+rel;
   let cache=null;
   try{ cache=await caches.open(SHERPA_CACHE); }catch(e){}
   if(cache){
     try{
-      const hit=await cache.match(url);
-      if(hit){ const b=new Uint8Array(await hit.arrayBuffer()); onBytes&&onBytes(b.length,0,true); return b; }
+      const hit=await cache.match(cacheKey);
+      if(hit){ const b=new Uint8Array(await hit.arrayBuffer()); onBytes&&onBytes(b.length,true); return b; }
     }catch(e){}
   }
-  const resp=await fetch(url);
-  if(!resp.ok) throw new Error(name+" 下载失败 "+resp.status);
-  const total=parseInt(resp.headers.get("content-length")||"0",10)||0;
-  const reader=resp.body.getReader();
-  const parts=[]; let got=0;
-  for(;;){
-    const {done,value}=await reader.read();
-    if(done) break;
-    parts.push(value); got+=value.length;
-    onBytes&&onBytes(got,total,false);
+  const bases=sherpaBase? [sherpaBase].concat(SHERPA_BASES.filter(b=>b!==sherpaBase)) : SHERPA_BASES;
+  let lastErr=null;
+  for(const base of bases){
+    try{
+      const resp=await fetch(base+rel);
+      if(!resp.ok) throw new Error("HTTP "+resp.status);
+      const total=parseInt(resp.headers.get("content-length")||"0",10)||0;
+      const reader=resp.body.getReader();
+      const parts=[]; let got=0;
+      for(;;){
+        const {done,value}=await reader.read();
+        if(done) break;
+        parts.push(value); got+=value.length;
+        onBytes&&onBytes(got,false);
+      }
+      const out=new Uint8Array(got); let o=0;
+      for(const p of parts){ out.set(p,o); o+=p.length; }
+      sherpaBase=base;
+      if(cache){ try{ await cache.put(cacheKey,new Response(out.slice())); }catch(e){} }
+      return out;
+    }catch(e){ lastErr=e; }
   }
-  const out=new Uint8Array(got); let o=0;
-  for(const p of parts){ out.set(p,o); o+=p.length; }
-  if(cache){ try{ await cache.put(url,new Response(out.slice(),{headers:{"content-type":"application/octet-stream"}})); }catch(e){} }
-  return out;
+  throw lastErr||new Error("下载失败");
 }
 function loadAsr(){
   if(sherpaRec) return Promise.resolve(sherpaRec);
   if(sherpaLoading) return sherpaLoading;
   sherpaLoading=(async()=>{
+    let done=0;
+    const paint=()=>{
+      const pct=Math.min(99, Math.round(done/SHERPA_TOTAL*100));
+      setWhisperInfo("⏳ 下载离线识别模型 "+pct+"%（只需一次，之后秒开）", Math.max(3,pct));
+    };
+    const loadOne=async rel=>{
+      let last=0;
+      return await fetchSherpaFile(rel, got=>{ done+=got-last; last=got; paint(); });
+    };
     setWhisperInfo("⏳ 正在加载离线识别引擎…", 3);
+    const wasmBytes=await loadOne(SHERPA_WASM);
     const M=await import(SHERPA_DIR+"asr.js");
     const P=await import(SHERPA_DIR+"preloader.js");
-    const mod=await M.initASRModule();
-    setWhisperInfo("⏳ 正在准备中文识别模型（约 25MB，只需一次，之后秒开）", 8);
-    let done=0;
+    const raw=await import(SHERPA_DIR+"asr-B3QtWJoU.js");
+    const init=raw.default||raw;
+    const wasmUrl=URL.createObjectURL(new Blob([wasmBytes],{type:"application/wasm"}));
+    const mod=await init({locateFile:()=>wasmUrl});
+    setWhisperInfo("⏳ 正在准备中文识别模型…", Math.max(3,Math.round(done/SHERPA_TOTAL*100)));
     const buf={};
     for(const key of ["encoder","decoder","joiner","tokens"]){
-      const name=SHERPA_FILES[key];
-      buf[key]=await fetchModelFile(name,got=>{
-        const all=done+got;
-        const pct=Math.min(99, 8+all/SHERPA_TOTAL*90);
-        setWhisperInfo("⏳ 下载中文识别模型 "+Math.min(100,Math.round(all/SHERPA_TOTAL*100))+"%（只需一次，之后秒开）", pct);
-      });
-      done+=buf[key].length;
+      const list=SHERPA_MODEL_FILES[key];
+      if(list.length===1){ buf[key]=await loadOne(list[0]); }
+      else{
+        const pieces=[]; let total=0;
+        for(const rel of list){ const b=await loadOne(rel); pieces.push(b); total+=b.length; }
+        const joined=new Uint8Array(total); let o=0;
+        for(const b of pieces){ joined.set(b,o); o+=b.length; }
+        buf[key]=joined;
+      }
     }
     setWhisperInfo("⏳ 正在启动离线识别…", 99);
     P.loadVirtualData({module:mod, virtualData:{
