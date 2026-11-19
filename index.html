@@ -175,9 +175,50 @@ function track(cat, act, label, val){
     background:rgba(0,0,0,.45); border-radius:16px; padding:8px 16px; margin-bottom:6px;
   }
   #levelName{font-size:20px; font-weight:900; color:#ffd591;}
-  #monsterRow{display:flex; align-items:flex-end; gap:8px; min-height:110px;}
-  #monster{font-size:80px; animation:monsterBob 2.5s ease-in-out infinite; filter:drop-shadow(0 10px 14px rgba(0,0,0,.45));}
-  @keyframes monsterBob{0%,100%{transform:translateY(0) rotate(-3deg);} 50%{transform:translateY(-10px) rotate(3deg);}}
+  /* 战斗舞台：奥特曼与怪兽脚踩同一块地面 */
+  #battleStage{
+    position:relative; display:flex; align-items:flex-end; justify-content:center;
+    gap:clamp(20px,7vw,64px); width:100%; max-width:560px; min-height:172px;
+    margin:0 auto 6px; padding:0 6px;
+  }
+  #battleGround{
+    position:absolute; left:0; right:0; bottom:0; height:22px; z-index:0;
+    background:linear-gradient(180deg, rgba(214,170,112,0), rgba(120,80,40,.6) 60%, rgba(70,44,20,.75));
+    border-top:2px solid rgba(255,224,168,.5); border-radius:50% 50% 0 0/100% 100% 0 0;
+  }
+  .fighter{position:relative; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; z-index:2;}
+  .fighterShadow{
+    position:absolute; bottom:-3px; left:50%; transform:translateX(-50%);
+    width:96%; height:15px; border-radius:50%;
+    background:radial-gradient(ellipse at center, rgba(0,0,0,.5), rgba(0,0,0,0) 70%);
+    z-index:0;
+  }
+  #monster{width:clamp(98px,23vw,142px); transform-origin:50% 94%; animation:monsterBob 2.5s ease-in-out infinite;}
+  #monster svg,#heroSvg svg{display:block; overflow:visible; filter:drop-shadow(0 5px 7px rgba(0,0,0,.5));}
+  @keyframes monsterBob{0%,100%{transform:translateY(0) rotate(-2deg);} 50%{transform:translateY(-5px) rotate(2deg);}}
+  #heroSvg{width:clamp(72px,17vw,106px); transform-origin:50% 94%; animation:heroIdle 2.9s ease-in-out infinite;}
+  @keyframes heroIdle{0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)}}
+  /* 血条 */
+  #hpWrap{position:absolute; top:-12px; left:50%; transform:translateX(-50%); width:clamp(96px,21vw,134px); z-index:3;}
+  #hpBar{height:12px; border-radius:7px; background:rgba(0,0,0,.6); border:2px solid rgba(255,226,170,.85); overflow:hidden; box-shadow:0 2px 6px rgba(0,0,0,.45);}
+  #hpFill{height:100%; width:100%; border-radius:5px; background:linear-gradient(90deg,#e74c3c,#f1c40f 55%,#2ecc71); transition:width .45s cubic-bezier(.2,.8,.3,1);}
+  #hpText{text-align:center; font-size:10px; font-weight:700; color:#ffe0a0; margin-top:2px; text-shadow:0 1px 3px #000;}
+  /* 攻击光束 */
+  #beamFx{position:absolute; z-index:5; pointer-events:none; left:0; right:0; bottom:64px; height:16px; opacity:0;}
+  #beamFx .core{
+    position:absolute; left:28%; right:30%; top:50%; height:9px; transform:translateY(-50%) scaleX(0); transform-origin:left center;
+    background:linear-gradient(90deg,#fff 0%,#cdefff 38%,#5ec6ff 68%,rgba(94,198,255,0) 100%);
+    border-radius:9px; box-shadow:0 0 14px 4px rgba(150,215,255,.95), 0 0 30px 11px rgba(79,140,247,.55);
+  }
+  #beamFx.fire .core{animation:beamFire .52s ease-out forwards;}
+  @keyframes beamFire{0%{transform:translateY(-50%) scaleX(0); opacity:1;} 22%{transform:translateY(-50%) scaleX(1); opacity:1;} 82%{opacity:1;} 100%{transform:translateY(-50%) scaleX(1); opacity:0;}}
+  /* 蓄力 / 出拳 / 受击 */
+  #heroSvg.charge{animation:heroCharge .45s ease-in-out infinite alternate;}
+  @keyframes heroCharge{from{transform:translateY(0) scale(1)} to{transform:translateY(3px) scale(1.07)}}
+  #heroSvg.attack{animation:heroAttack .5s ease-out;}
+  @keyframes heroAttack{0%{transform:translateX(0)} 28%{transform:translateX(24px) scale(1.09)} 62%{transform:translateX(17px)} 100%{transform:translateX(0)}}
+  #monster.hurt{animation:monsterHurt .42s ease-out;}
+  @keyframes monsterHurt{0%{transform:translateX(0)} 20%{transform:translateX(15px) rotate(9deg); filter:brightness(2)} 50%{transform:translateX(-9px) rotate(-6deg)} 100%{transform:translateX(0)}}
   #scroll{
     position:relative; background:linear-gradient(180deg,#f5d67b,#e9b83c);
     border-radius:8px; padding:16px 20px 14px; max-width:640px; width:100%;
@@ -555,9 +596,21 @@ function track(cat, act, label, val){
       <span id="levelName">第 1 关</span>
       <button class="btn small" onclick="announceName(false)">🔊 报关名</button>
     </div>
-    <div id="monsterRow">
-      <div id="monster">👹</div>
-      <div style="font-size:11px; color:#ffd591; margin-bottom:14px;">▲ 守关怪物<br>举着金卷轴</div>
+    <div id="battleStage">
+      <div id="battleGround"></div>
+      <div class="fighter">
+        <div class="fighterShadow"></div>
+        <div id="heroSvg"></div>
+      </div>
+      <div class="fighter">
+        <div class="fighterShadow"></div>
+        <div id="monster"></div>
+        <div id="hpWrap">
+          <div id="hpBar"><div id="hpFill"></div></div>
+          <div id="hpText">守关怪物 · 举着金卷轴</div>
+        </div>
+      </div>
+      <div id="beamFx"><div class="core"></div></div>
     </div>
     <div id="scroll">
       <div id="scrollTitle"></div>
@@ -804,6 +857,88 @@ const TOYS = [
   {e:"🧩", n:"大拼图"},{e:"🎨", n:"画笔套装"},{e:"🐻", n:"泰迪熊"},
 ];
 const MONSTERS = ["👹","👺","🐲","🐗","🦊","🐙","🦂","🕷️","🐺","🦇","👻","😴"];
+/* 守关怪兽：手绘 SVG，12 关不同造型/配色，脚踩地面带影子、举金卷轴 */
+const MONSTER_LOOKS=[
+  {b:"#8e44ad",d:"#5b2c6f",horn:"#f4d03f",eye:"#fff",kind:"ogre"},   // 紫鬼
+  {b:"#c0392b",d:"#7b241c",horn:"#f5b041",eye:"#ffeaa7",kind:"ogre"}, // 红鬼
+  {b:"#1e8449",d:"#145a32",horn:"#f1c40f",eye:"#fff",kind:"dragon"},  // 绿龙
+  {b:"#935116",d:"#5d3a0a",horn:"#f7dc6f",eye:"#fff",kind:"boar"},    // 野猪
+  {b:"#e67e22",d:"#a04000",horn:"#f9e79f",eye:"#fff",kind:"fox"},     // 狐狸
+  {b:"#7d3c98",d:"#512e5f",horn:"#aed6f1",eye:"#fff",kind:"octo"},    // 章鱼
+  {b:"#b7950b",d:"#7d6608",horn:"#f4d03f",eye:"#fff",kind:"scorp"},   // 蝎子
+  {b:"#2c3e50",d:"#1a252f",horn:"#e74c3c",eye:"#f1c40f",kind:"spider"},// 蜘蛛
+  {b:"#616a6b",d:"#424949",horn:"#f5cba7",eye:"#fff",kind:"wolf"},    // 狼
+  {b:"#4a235a",d:"#2c0f3a",horn:"#e8daef",eye:"#f1948a",kind:"bat"},  // 蝙蝠
+  {b:"#aeb6bf",d:"#7f8c8d",horn:"#ecf0f1",eye:"#2c3e50",kind:"ghost"},// 幽灵
+  {b:"#5d6d7e",d:"#34495e",horn:"#f7dc6f",eye:"#fff",kind:"ogre"}     // 睡怪
+];
+function monsterSVG(i,size){
+  size=size||136;
+  const L=MONSTER_LOOKS[i%MONSTER_LOOKS.length], k=L.k;
+  const dk2=c=>{const n=parseInt(c.slice(1),16);return "#"+[16,8,0].map(sh=>Math.max(0,((n>>sh)&255)-45).toString(16).padStart(2,"0")).join("");};
+  const dark=dk2(L.b);
+  let extra="";
+  /* 角 / 耳 / 翅 / 触手：按造型变化 */
+  if(k==="ogre"||k==="dragon"||k==="boar"||k==="wolf"){
+    extra+=`<path d="M9 30 Q2 8 20 20 L22 32Z" fill="${L.horn}" stroke="${dark}" stroke-width="1.4"/>
+            <path d="M51 30 Q58 8 40 20 L38 32Z" fill="${L.horn}" stroke="${dark}" stroke-width="1.4"/>`;
+  }
+  if(k==="fox"||k==="wolf"){
+    extra+=`<path d="M11 26 L7 6 L24 20Z" fill="${L.b}" stroke="${dark}" stroke-width="1.4"/>
+            <path d="M49 26 L53 6 L36 20Z" fill="${L.b}" stroke="${dark}" stroke-width="1.4"/>`;
+  }
+  if(k==="dragon"||k==="bat"){
+    extra+=`<path d="M10 44 Q-6 34 2 60 Q10 50 14 60 Q18 50 22 44Z" fill="${L.d}" stroke="${dark}" stroke-width="1.2"/>
+            <path d="M50 44 Q66 34 58 60 Q50 50 46 60 Q42 50 38 44Z" fill="${L.d}" stroke="${dark}" stroke-width="1.2"/>`;
+  }
+  if(k==="spider"){
+    for(let s=0;s<3;s++){ extra+=`<path d="M${10-s} ${52+s*7} Q-4 ${48+s*9} -2 ${66+s*8}" stroke="${dark}" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+      <path d="M50+s ${52+s*7} Q64 ${48+s*9} 62 ${66+s*8}" stroke="${dark}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`; }
+  }
+  if(k==="octo"||k==="scorp"){
+    extra+=`<path d="M46 78 q14 2 12 -10 q-2 8 -12 6Z M14 78 q-14 2 -12 -10 q2 8 12 6Z" fill="${L.d}" stroke="${dark}" stroke-width="1"/>`;
+  }
+  /* 尾巴 */
+  if(k==="dragon"||k==="scorp"||k==="wolf"||k==="fox"){
+    extra+=`<path d="M50 84 q16 6 14 -10" stroke="${L.d}" stroke-width="5" fill="none" stroke-linecap="round"/>`;
+  }
+  /* 眼睛：蜘蛛多眼，其它两只 */
+  let eyes="";
+  if(k==="spider"){
+    eyes=`<circle cx="20" cy="38" r="3" fill="${L.eye}"/><circle cx="30" cy="36" r="3.4" fill="${L.eye}"/>
+          <circle cx="40" cy="38" r="3" fill="${L.eye}"/><circle cx="16" cy="46" r="2.6" fill="${L.eye}"/><circle cx="44" cy="46" r="2.6" fill="${L.eye}"/>`;
+  }else{
+    eyes=`<ellipse cx="21" cy="40" rx="6.5" ry="8" fill="#fff"/><ellipse cx="39" cy="40" rx="6.5" ry="8" fill="#fff"/>
+          <circle cx="22" cy="41" r="3.4" fill="${L.eye==="#fff"?"#1a1a1a":L.eye}"/><circle cx="38" cy="41" r="3.4" fill="${L.eye==="#fff"?"#1a1a1a":L.eye}"/>
+          <circle cx="23" cy="39.5" r="1.2" fill="#fff"/><circle cx="39" cy="39.5" r="1.2" fill="#fff"/>
+          <path d="M15 31 l10 3 M45 31 l-10 3" stroke="${dark}" stroke-width="2.4" stroke-linecap="round"/>`;
+  }
+  /* 嘴巴 + 獠牙 */
+  let mouth=`<path d="M18 54 Q30 68 42 54 Q30 60 18 54Z" fill="#5b1414" stroke="${dark}" stroke-width="1"/>`;
+  if(k==="ogre"||k==="wolf"||k==="boar"||k==="dragon"||k==="bat"){
+    mouth+=`<path d="M21 55 l3 6 3 -5Z M39 55 l-3 6 -3 -5Z" fill="#fff"/>`;
+  }
+  if(k==="boar") mouth+=`<ellipse cx="30" cy="57" rx="4" ry="3" fill="#d98880" stroke="${dark}" stroke-width=".8"/>`;
+  return `<svg width="${size}" height="${Math.round(size*1.02)}" viewBox="-8 0 76 78" style="vertical-align:middle;">
+    <ellipse cx="30" cy="75" rx="26" ry="4.5" fill="rgba(0,0,0,.32)"/>
+    ${extra}
+    <path d="M12 60 q-6 6 -2 12 l7 -2Z M48 60 q6 6 2 12 l-7 -2Z" fill="${L.d}" stroke="${dark}" stroke-width="1"/>
+    <ellipse cx="30" cy="56" rx="20" ry="17" fill="${L.b}" stroke="${dark}" stroke-width="1.6"/>
+    <ellipse cx="30" cy="60" rx="12" ry="10" fill="${L.horn}" opacity=".45"/>
+    <circle cx="30" cy="40" r="22" fill="${L.b}" stroke="${dark}" stroke-width="1.8"/>
+    <ellipse cx="30" cy="46" rx="15" ry="11" fill="${dk2(L.b)}" opacity=".35"/>
+    ${eyes}${mouth}
+    ${k==="ghost"?'<path d="M12 70 q4 8 8 0 q4 8 8 0 q4 8 8 0 q4 8 8 0" stroke="'+L.d+'" stroke-width="2" fill="none"/>':""}
+    <path d="M10 60 q-9 -3 -10 -14" stroke="${L.b}" stroke-width="6.5" fill="none" stroke-linecap="round"/>
+    <path d="M50 60 q9 -3 10 -14" stroke="${L.b}" stroke-width="6.5" fill="none" stroke-linecap="round"/>
+    <g transform="translate(60,46) rotate(10)">
+      <rect x="-3.5" y="-13" width="7" height="18" rx="2" fill="#f7dc6f" stroke="#b7950b" stroke-width="1"/>
+      <rect x="-5.5" y="-15" width="11" height="3.4" rx="1.7" fill="#d4ac0d"/>
+      <rect x="-5.5" y="2" width="11" height="3.4" rx="1.7" fill="#d4ac0d"/>
+      <path d="M-1 -9 h2 M-1 -5 h2" stroke="#b7950b" stroke-width=".9"/>
+    </g>
+  </svg>`;
+}
 /* 9 个奥特曼英雄 */
 const HEROES=[
   {n:"初代奥特曼", b:"#c3c9d2", a:"#e03535"},
@@ -2252,6 +2387,7 @@ let curLevel=-1;
 let readChainActive=false, challengeActive=false, matchedSet=new Set(), rec=null, recRestartTimer=null;
 let heardFinal="", heardInterim="", micStream=null, micCtx=null, micRAF=null;
 let charMatched={};   // 每句已说对的字序号（逐字高亮的状态）
+let battleLastHit=0, battleLastStrike=0;  // 出拳节流：读对字数增加且隔够时间才打一拳
 
 /* 音量条：让娃直观看到"麦克风听到我了" */
 function startMicMeter(stream){
@@ -2364,6 +2500,8 @@ let challengeStarting=false;
 function startChallenge(){
   if(curLevel<0 || challengeStarting) return;
   challengeStarting=true;
+  battleLastHit=0; battleLastStrike=0;
+  battleCharge();
   stopSpeak();
   clearMarks();
   renderScroll();
@@ -2538,6 +2676,15 @@ function evaluateRecog(text){
   const st=paintChars(heard);
   const lt=document.getElementById("liveText");
   if(lt) lt.textContent="✅ 已说对 "+st.hit+" / "+st.total+" 个字"+(heard?"　听到："+heard.slice(-20):"");
+  /* 读对的字变多 → 奥特曼出拳打怪，血条跟着掉（节流：每 420ms 最多一拳） */
+  if(st.hit>battleLastHit){
+    battleLastHit=st.hit;
+    const now=Date.now();
+    if(now-battleLastStrike>420){
+      battleLastStrike=now;
+      battleStrike(st.total? st.hit/st.total : 0);
+    }
+  }
   // 整体相似度达标也算过关（防止某句发音被识别歪了卡死）
   const full=normCn(p.l.join(""));
   if(lcsLen(full,heard)/Math.max(1,full.length) >= 0.75){
@@ -2648,9 +2795,17 @@ async function checkMicPermission(){
 function startLevel(i){
   curLevel=i;
   const p=POEMS[i];
+  /* 战斗舞台：左边玩家奥特曼（带装备），右边守关怪兽（手绘 SVG） */
   const mEl=document.getElementById("monster");
-  mEl.classList.remove("dying");
-  mEl.textContent = MONSTERS[i%MONSTERS.length];
+  mEl.classList.remove("dying","hurt");
+  mEl.innerHTML = monsterSVG(i);
+  const heroEl=document.getElementById("heroSvg");
+  heroEl.classList.remove("attack","charge");
+  heroEl.innerHTML = heroSVG(HEROES[S.hero]||HEROES[0], 96);
+  const hpFill=document.getElementById("hpFill");
+  if(hpFill) hpFill.style.width="100%";
+  const beam=document.getElementById("beamFx");
+  if(beam) beam.classList.remove("fire");
   document.getElementById("levelName").textContent = "第 "+(i+1)+" 关 · 《"+p.t+"》 · "+p.g;
   document.getElementById("scrollTitle").textContent="《"+p.t+"》";
   document.getElementById("scrollAuthor").textContent=p.a;
@@ -2678,6 +2833,36 @@ function renderScroll(){
   }).join("");
   charMatched={};
 }
+/* ---------- 战斗动作：背对的字变成出拳打怪 ---------- */
+function battleCharge(){
+  const h=document.getElementById("heroSvg");
+  if(h){ h.classList.remove("attack"); h.classList.add("charge"); }
+}
+function battleStrike(hitRatio){
+  /* 读对字 → 奥特曼出拳 + 光束 + 怪兽受击 + 血条随进度下降 */
+  const h=document.getElementById("heroSvg"), m=document.getElementById("monster"), beam=document.getElementById("beamFx");
+  if(h){ h.classList.remove("charge","attack"); void h.offsetWidth; h.classList.add("attack");
+    setTimeout(()=>h.classList.remove("attack"),520); }
+  if(m){ m.classList.remove("hurt"); void m.offsetWidth; m.classList.add("hurt");
+    setTimeout(()=>m.classList.remove("hurt"),440); }
+  if(beam){ beam.classList.remove("fire"); void beam.offsetWidth; beam.classList.add("fire");
+    setTimeout(()=>beam.classList.remove("fire"),560); }
+  const hp=document.getElementById("hpFill");
+  if(hp) hp.style.width=Math.max(0,100-Math.round(hitRatio*100))+"%";
+}
+function battleKO(){
+  /* 过关大招：连打三拳后怪兽倒下 */
+  const h=document.getElementById("heroSvg"), beam=document.getElementById("beamFx");
+  if(h) h.classList.remove("charge");
+  let n=0;
+  const volley=setInterval(()=>{
+    if(h){ h.classList.remove("attack"); void h.offsetWidth; h.classList.add("attack"); }
+    if(beam){ beam.classList.remove("fire"); void beam.offsetWidth; beam.classList.add("fire"); }
+    const m=document.getElementById("monster");
+    if(m){ m.classList.remove("hurt"); void m.offsetWidth; m.classList.add("hurt"); }
+    if(++n>=3){ clearInterval(volley); const hp=document.getElementById("hpFill"); if(hp) hp.style.width="0%"; }
+  },260);
+}
 function killMonster(){
   const m=document.getElementById("monster");
   if(m && !m.classList.contains("dying")){
@@ -2692,7 +2877,8 @@ function killMonster(){
 function levelPassed(){
   stopSpeak();
   stopRecognition();
-  killMonster();
+  battleKO();
+  setTimeout(killMonster, 780);
   const first = !S.done.includes(curLevel);
   if(curLevel>=0 && POEMS[curLevel]) track("关卡","过关",POEMS[curLevel].t, curLevel+1);
   if(first){
