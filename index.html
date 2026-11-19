@@ -816,8 +816,103 @@ const HEROES=[
   {n:"赛罗奥特曼", b:"#a3b8cf", a:"#e03535"},
   {n:"泽塔奥特曼", b:"#a8c2ad", a:"#2a8f5b"},
 ];
+/* 已穿戴的装备直接画在奥特曼身上：帽子/头盔/王冠、衣服/铠甲/围巾、鞋、武器、盾、坐骑 */
+function gearFor(slot){
+  if(!S || !S.equip || S.equip[slot]==null) return null;
+  return TREASURES[S.equip[slot]] || null;
+}
 function heroSVG(h,size){
-  return `<svg width="${size}" height="${Math.round(size*1.3)}" viewBox="0 0 40 52" style="vertical-align:middle;">
+  const head=gearFor("head"), body=gearFor("body"), feet=gearFor("feet"),
+        hand=gearFor("hand"), hand2=gearFor("hand2"), mount=gearFor("mount");
+  const hasGear=!!(head||body||feet||hand||hand2);
+  const hasMount=!!(mount && !S.car);
+  const vbY = hasGear? -5 : 0;
+  const vbH = 52 - vbY + (hasMount? 15 : 0);
+  let g="";
+  /* 坐骑：奥特曼骑在马背上 */
+  if(hasMount){
+    const mc = mount.r==="legend"? "#7d5326" : "#a9743f";
+    const md = dk(mc,.3);
+    g+=`<ellipse cx="19" cy="58.5" rx="12.5" ry="5" fill="${mc}" stroke="${md}" stroke-width=".8"/>
+      <rect x="8.6" y="60" width="2.8" height="6.4" rx="1.2" fill="${md}"/>
+      <rect x="15" y="61" width="2.8" height="5.6" rx="1.2" fill="${md}"/>
+      <rect x="22.5" y="61" width="2.8" height="5.6" rx="1.2" fill="${md}"/>
+      <rect x="28" y="60" width="2.8" height="6.4" rx="1.2" fill="${md}"/>
+      <path d="M30 57.5 q4.5 -.5 5.8 -6.5 l2.4 -4.2 q1 -.4 1.4 .6 l-2.2 5.2 -.8 5.8Z" fill="${mc}" stroke="${md}" stroke-width=".7"/>
+      <path d="M36.5 46.8 q2.4 -.8 2.6 1.6 q.2 1.8 -1.6 2.2Z" fill="${md}"/>
+      <path d="M8 56 q-3.4 2 -3 5.4" stroke="${md}" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+      <rect x="12" y="53.6" width="15" height="2.6" rx="1.2" fill="${mount.r==="legend"? "#c03a3a":"#5b7fae"}"/>`;
+  }
+  /* 手2：盾牌 / 手套 */
+  if(hand2){
+    if(hand2.en==="shield"){
+      g+=`<path d="M2.6 26.5 h6.4 v6.2 q0 5.4 -3.2 6.8 q-3.2 -1.4 -3.2 -6.8Z" fill="#cfd6dd" stroke="#5f6a76" stroke-width=".9"/>
+        <circle cx="5.8" cy="31.5" r="1.7" fill="#e03535"/>`;
+    }else{
+      g+=`<circle cx="6" cy="38.2" r="2.8" fill="#b9bec4" stroke="#7c828a" stroke-width=".7"/>`;
+    }
+  }
+  /* 手1：武器举在右手上方 */
+  if(hand){
+    if(hand.en==="sword"){
+      const col = hand.r==="rare"? "#dde2e8" : "#b98a4e";
+      g+=`<rect x="35.8" y="13.5" width="2.5" height="12.5" rx="1" fill="${col}" stroke="rgba(0,0,0,.25)" stroke-width=".4"/>
+        <rect x="34" y="24.6" width="6" height="1.9" rx=".8" fill="#8a5f2c"/>
+        <rect x="36.3" y="26.5" width="1.9" height="3" fill="#6e4a1e"/>`;
+    }else if(hand.en==="bow"){
+      g+=`<path d="M36.5 12.5 q5.5 8.5 0 17" stroke="#8a5f2c" stroke-width="1.7" fill="none" stroke-linecap="round"/>
+        <line x1="36.5" y1="12.5" x2="36.5" y2="29.5" stroke="#e8e2d0" stroke-width=".9"/>
+        <path d="M36.5 21 l7 0 M41 19.4 l2.6 1.6 -2.6 1.6Z" fill="#c03a3a" stroke="#c03a3a" stroke-width=".8"/>`;
+    }else if(hand.en==="wand"){
+      g+=`<rect x="36.4" y="17" width="1.9" height="10.5" rx=".8" fill="#7a4a12"/>
+        <path d="M37.3 10.2 l1.2 2.8 3 .3 -2.2 2 .7 3 -2.7 -1.6 -2.7 1.6 .7 -3 -2.2 -2 3 -.3Z" fill="#ffd34d" stroke="#c9940a" stroke-width=".6"/>`;
+    }
+  }
+  /* 脚：草鞋 / 皮靴 */
+  if(feet){
+    const c = feet.r==="rare"? "#6b4226" : "#b07c46";
+    const hgt = feet.r==="rare"? 5.6 : 3.2;
+    g+=`<rect x="12.6" y="${51-hgt}" width="6.7" height="${hgt}" rx="1.6" fill="${c}" stroke="rgba(0,0,0,.2)" stroke-width=".4"/>
+      <rect x="20.7" y="${51-hgt}" width="6.7" height="${hgt}" rx="1.6" fill="${c}" stroke="rgba(0,0,0,.2)" stroke-width=".4"/>
+      <rect x="12.6" y="49.9" width="6.7" height="1.5" rx=".7" fill="#2f2a26"/>
+      <rect x="20.7" y="49.9" width="6.7" height="1.5" rx=".7" fill="#2f2a26"/>`;
+  }
+  /* 身体：布衣 / 武士服 / 黄金铠甲 / 围巾 */
+  if(body){
+    if(body.en==="scarf"){
+      g+=`<rect x="9.6" y="23.6" width="20.8" height="3.6" rx="1.7" fill="#e05a5a" stroke="rgba(0,0,0,.15)" stroke-width=".5"/>
+        <path d="M26.5 26 l4.2 8.4 -3.8 1 -2.4-7.6Z" fill="#e05a5a" stroke="rgba(0,0,0,.15)" stroke-width=".5"/>`;
+    }else if(body.en==="shirt"){
+      g+=`<rect x="10" y="24" width="20" height="18" rx="6" fill="#5b8fd6" stroke="rgba(0,0,0,.15)" stroke-width=".6"/>
+        <rect x="12" y="26" width="16" height="4" fill="${h.a}"/>
+        <rect x="18.4" y="24" width="3.4" height="18" fill="#ffffff" opacity=".5"/>`;
+    }else if(body.en==="armor" && body.r==="rare"){
+      g+=`<rect x="10" y="24" width="20" height="18" rx="6" fill="#3a4a8c" stroke="rgba(0,0,0,.2)" stroke-width=".6"/>
+        <rect x="12" y="26" width="16" height="4" fill="${h.a}"/>
+        <rect x="10" y="33" width="20" height="3.6" fill="#e8e2d0"/>
+        <rect x="18.6" y="33" width="2.8" height="9" fill="#e8e2d0"/>`;
+    }else{
+      g+=`<rect x="10" y="24" width="20" height="18" rx="6" fill="#e8b923" stroke="#a67c00" stroke-width="1"/>
+        <path d="M20 25.5 l4.6 4.6 -4.6 4.6 -4.6 -4.6Z" fill="#fff2b0" stroke="#c79b12" stroke-width=".6"/>
+        <rect x="10" y="33.6" width="20" height="2.6" fill="#a67c00" opacity=".55"/>`;
+    }
+  }
+  /* 头：帽子 / 头盔 / 王冠（头顶 y=1，装备向上探到 vbY） */
+  if(head){
+    if(head.en==="crown"){
+      g+=`<path d="M13.5 2.2 L13.5 -3 L16.6 -.4 L20 -3.8 L23.4 -.4 L26.5 -3 L26.5 2.2 Q20 4.4 13.5 2.2Z" fill="#ffcc33" stroke="#b8860b" stroke-width=".8"/>
+        <circle cx="20" cy="-.2" r="1.1" fill="#e03535"/><circle cx="15.6" cy="1" r=".8" fill="#3a7ad9"/><circle cx="24.4" cy="1" r=".8" fill="#3a7ad9"/>`;
+    }else if(head.en==="helmet"){
+      g+=`<path d="M9.6 8.2 Q10 -.8 20 -.8 Q30 -.8 30.4 8.2 L30.4 9.6 Q20 6.6 9.6 9.6Z" fill="#b9c2cc" stroke="#6f7884" stroke-width=".9"/>
+        <rect x="9.2" y="8.4" width="21.6" height="2.4" rx="1.2" fill="#8d97a3"/>
+        <rect x="18.6" y="-.8" width="2.8" height="4.4" rx="1.2" fill="#e03535"/>`;
+    }else{
+      g+=`<ellipse cx="20" cy="3.4" rx="10.5" ry="2.5" fill="#2f2a26"/>
+        <path d="M13.8 3.2 Q14.4 -2.6 20 -2.6 Q25.6 -2.6 26.2 3.2 Z" fill="#3d3630"/>
+        <rect x="18.7" y="-4.2" width="2.6" height="2" rx=".6" fill="#e03535"/>`;
+    }
+  }
+  return `<svg width="${size}" height="${Math.round(size*vbH/40)}" viewBox="0 ${vbY} 40 ${vbH}" style="vertical-align:middle;">
     <ellipse cx="20" cy="12" rx="10" ry="11" fill="${h.b}" stroke="#8a8f96"/>
     <ellipse cx="14.5" cy="11" rx="3.2" ry="4.4" fill="#ffd34d"/>
     <ellipse cx="25.5" cy="11" rx="3.2" ry="4.4" fill="#ffd34d"/>
@@ -828,6 +923,7 @@ function heroSVG(h,size){
     <rect x="21" y="42" width="5.5" height="9" rx="2" fill="${h.b}" stroke="#8a8f96"/>
     <rect x="3.5" y="25" width="5" height="14" rx="2.5" fill="${h.b}" stroke="#8a8f96"/>
     <rect x="31.5" y="25" width="5" height="14" rx="2.5" fill="${h.b}" stroke="#8a8f96"/>
+    ${g}
   </svg>`;
 }
 /* 赛车（交通工具）：奥特曼坐在里面，轮子会转 */
@@ -1378,27 +1474,100 @@ function avatarEmoji(){
   return "🩲";
 }
 
-/* ================= 地图生成 ================= */
+/* ================= 地图生成（迷宫版） ================= */
 const NODE_GAP = 108, MAP_TOP = 130, MAP_H = 1000;
-/* 地图尺寸：主路横向跨度 17000（原来 5260），路程约 3 倍；对岸的大桥/大河/大山整体右移 EXT_DX */
+/* 地图尺寸：主路横向跨度 17000；对岸的大桥/大河/大山整体右移 EXT_DX */
 const MAP_X0    = 170;
 const PATH_SPAN = 17000;
 const EXT_DX    = PATH_SPAN - 5260;
 const MAP_W     = 18700;
-/* 路线：一条从左往右蜿蜒的大路——左右大摆动 + 翻山越岭，中途过桥 */
+/* 固定随机种子：保证迷宫形状每次刷新都一样，存档位置才对得上 */
+let _seed=20261119;
+function srand(){ _seed=(_seed*1103515245+12345)%2147483648; return _seed/2147483648; }
+function shuffleA(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(srand()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+
+/* 迷宫主路：横平竖直的绿篱迷宫小径（三行 × 五十列，随机上下穿行） */
+const MAZE_ROWS=[446,612,778];
+const MAZE=(()=>{
+  const COL_W=330;
+  const nCols=Math.floor(PATH_SPAN/COL_W);
+  const raw=[{x:MAP_X0, y:MAZE_ROWS[1]}];
+  const corners=[];   // 直角拐点（迷宫味所在）
+  const peaks=[];     // 往上爬的拐点 → 放山包
+  let r=1, x=MAP_X0;
+  for(let c=0;c<nCols;c++){
+    const nx=MAP_X0+(c+1)*COL_W;
+    let nr=r;
+    if(c%2===1){  // 隔列换行，避免太碎
+      if(r===0)      nr= srand()<.72?1:0;
+      else if(r===2) nr= srand()<.72?1:2;
+      else           nr= (t=>t<.4?0: t<.8?2:1)(srand());
+    }
+    if(nr!==r){
+      corners.push({x, y:MAZE_ROWS[nr]});
+      if(nr<r) peaks.push({x, y:MAZE_ROWS[nr]-46, prom:MAZE_ROWS[r]-MAZE_ROWS[nr]});
+      raw.push({x, y:MAZE_ROWS[nr]});
+      r=nr;
+    }
+    raw.push({x:nx, y:MAZE_ROWS[r]});
+    x=nx;
+  }
+  /* 等弧长重采样 → pathPoint(t) 匀速 */
+  const segs=[]; let total=0;
+  for(let i=1;i<raw.length;i++){ const L=Math.hypot(raw[i].x-raw[i-1].x, raw[i].y-raw[i-1].y); segs.push(L); total+=L; }
+  const N=1500, pts=[];
+  let acc=0, j=0;
+  for(let k=0;k<=N;k++){
+    const target=total*k/N;
+    while(j<segs.length-1 && acc+segs[j]<target){ acc+=segs[j]; j++; }
+    const f=(target-acc)/(segs[j]||1);
+    pts.push({x:raw[j].x+(raw[j+1].x-raw[j].x)*f, y:raw[j].y+(raw[j+1].y-raw[j].y)*f});
+  }
+  return {raw, pts, corners, peaks};
+})();
+/* 折线转圆角 path（直角变小圆弧，迷宫小径才好看） */
+function roundedPathD(pts, rad){
+  if(!pts.length) return "";
+  const D=(v)=>v.toFixed(1);
+  let d="M"+D(pts[0].x)+" "+D(pts[0].y);
+  for(let i=1;i<pts.length-1;i++){
+    const p=pts[i], a=pts[i-1], b=pts[i+1];
+    const l1=Math.hypot(p.x-a.x,p.y-a.y)||1, l2=Math.hypot(b.x-p.x,b.y-p.y)||1;
+    const r1=Math.min(rad,l1/2), r2=Math.min(rad,l2/2);
+    const p1={x:p.x-(p.x-a.x)/l1*r1, y:p.y-(p.y-a.y)/l1*r1};
+    const p2={x:p.x+(b.x-p.x)/l2*r2, y:p.y+(b.y-p.y)/l2*r2};
+    d+=" L"+D(p1.x)+" "+D(p1.y)+" Q"+D(p.x)+" "+D(p.y)+" "+D(p2.x)+" "+D(p2.y);
+  }
+  const e=pts[pts.length-1];
+  d+=" L"+D(e.x)+" "+D(e.y);
+  return d;
+}
+/* 路线参数化：关卡、宝箱、镜头都从这里取点 */
 function pathPoint(t){
-  return {
-    x: MAP_X0 + t*PATH_SPAN + Math.sin(t*Math.PI*2*3.6 + 0.8)*340,  /* 左右S形大弯 */
-    y: 615 + Math.sin(t*Math.PI*2*2.35 - 0.5)*172    /* 翻山：上山、下山 */
-           + Math.sin(t*Math.PI*2*3.1 + 1.1)*60      /* 次级起伏 */
-           + Math.sin(t*Math.PI*2*5.0 - 0.4)*17      /* 细碎弯曲 */
-  };
+  const a=MAZE.pts;
+  const u=Math.max(0,Math.min(1,t))*(a.length-1);
+  const i=Math.floor(u), f=u-i;
+  if(i>=a.length-1) return a[a.length-1];
+  return {x:a[i].x+(a[i+1].x-a[i].x)*f, y:a[i].y+(a[i+1].y-a[i].y)*f};
 }
 function nodePos(i){ return pathPoint(i/(POEMS.length-1)); }
 /* 把路线采样成折线，用来做"只能走在路上"的约束 */
 const PATH_PTS=(()=>{ const a=[]; for(let k=0;k<=520;k++) a.push(pathPoint(k/520)); return a; })();
-const SIDE_PATHS=[];   // 从小路分叉出去的小径：{pts:[{x,y}], half:px}
+const SIDE_PATHS=[];   // 迷宫死胡同（可以走，尽头常藏着宝箱）：{pts:[{x,y}], half:px}
 const STREAMS=[];      // 小溪（不可行走，只能从桥上过）：{pts:[{x,y}], half:px}
+/* 迷宫死胡同：从主路拐点伸出 1~2 格，走错了就得原路绕回来 */
+const DEAD_ENDS=(()=>{
+  const out=[];
+  const cand=shuffleA(MAZE.corners.slice()).slice(0,13);
+  cand.forEach((c,idx)=>{
+    const dir = c.y>=MAZE_ROWS[2]-1? -1 : c.y<=MAZE_ROWS[0]+1? 1 : (idx%2?1:-1);
+    const L=(idx%3===0?2:1)*166;
+    const ey=Math.max(396, Math.min(908, c.y+dir*L));
+    const ex=Math.max(80, Math.min(MAP_W-140, c.x+(idx%2?240:-240)));
+    out.push({pts:[{x:c.x,y:c.y},{x:c.x,y:ey},{x:ex,y:ey}], half:9});
+  });
+  return out;
+})();
 function nearestOnSegments(pts,x,y){
   let best={d:1e9,x:0,y:0};
   for(let k=0;k<pts.length-1;k++){
@@ -1568,22 +1737,8 @@ function lakeSVG(cx,cy,rx,ry){
 }
 /* ===== 山坡（路会爬上去再下来） ===== */
 function pathPeaks(){
-  const N=240, ys=[];
-  for(let k=0;k<=N;k++) ys.push(pathPoint(k/N).y);
-  const out=[];
-  for(let k=3;k<N-2;k++){
-    if(ys[k]<=ys[k-1] && ys[k]<=ys[k+1]){
-      let lv=ys[k], rv=ys[k];
-      for(let j=k;j>Math.max(0,k-44);j--) lv=Math.max(lv,ys[j]);
-      for(let j=k;j<Math.min(N,k+44);j++) rv=Math.max(rv,ys[j]);
-      const prom=Math.min(lv,rv)-ys[k];
-      if(prom>52){
-        const p=pathPoint(k/N);
-        out.push({x:p.x, y:ys[k], prom});
-      }
-    }
-  }
-  return out;
+  /* 迷宫版：山包放在主路"向上爬"的拐点（行差越大山越高） */
+  return MAZE.peaks;
 }
 function hillSVG(cx, peakY, w, h, idx){
   const baseY=Math.min(peakY+h, 902);
@@ -1853,9 +2008,8 @@ function buildMap(){
   const extPts=extPathPts();
   extPts.forEach(p=>PATH_PTS.push(p));
 
-  /* ---- 大路（所有关口在这条路上） ---- */
-  let mainD="";
-  PATH_PTS.forEach((p,k)=>{ if(k%2===0) mainD+=(k?"L":"M")+p.x.toFixed(1)+" "+p.y.toFixed(1)+" "; });
+  /* ---- 大路（迷宫主径：横平竖直 + 圆角拐弯，所有关口在这条路上） ---- */
+  const mainD=roundedPathD(MAZE.raw, 34);
 
   /* ---- 对岸那条从山上流下来的大河 ---- */
   const bigRiverD=(()=>{
@@ -1868,26 +2022,11 @@ function buildMap(){
     return d;
   })();
 
-  /* ---- 小路：从大路分叉出去的小径（同样可以走） ---- */
+  /* ---- 迷宫死胡同：从主路拐点伸出，可以走，尽头常藏着宝箱 ---- */
   SIDE_PATHS.length=0;
-  let sideD="";
-  [3,7,10,14,18,22,26,30,34,38,42,46,49].forEach((i,k)=>{
-    const a=nodePos(i);
-    const dir = k%2===0 ? 1 : -1;
-    const room = dir>0 ? (844-a.y) : (a.y-368);
-    if(room<110) return;
-    const dist=Math.min(room-14, 150+Math.random()*85);
-    const end={ x:a.x+rand(-110,110), y:a.y+dir*dist };
-    const mx=(a.x+end.x)/2, my=(a.y+end.y)/2;
-    const ctrl={ x:mx+rand(-75,75), y:my };
-    const pts=[];
-    for(let s=0;s<=26;s++){
-      const t=s/26, u=1-t;
-      pts.push({ x:u*u*a.x+2*u*t*ctrl.x+t*t*end.x, y:u*u*a.y+2*u*t*ctrl.y+t*t*end.y });
-    }
-    SIDE_PATHS.push({pts, half:8});
-    sideD += pts.map((p,s)=>(s?"L":"M")+p.x.toFixed(1)+" "+p.y.toFixed(1)).join(" ")+" ";
-  });
+  DEAD_ENDS.forEach(de=>SIDE_PATHS.push(de));
+  const deadEndD = DEAD_ENDS.map(de=>roundedPathD(de.pts, 26)).join(" ");
+  const deadEndSpots = DEAD_ENDS.map(de=>de.pts[de.pts.length-1]);
 
   document.getElementById("mapSVG").innerHTML = `
     <defs>
@@ -1912,12 +2051,12 @@ function buildMap(){
     <path d="${streamD}" fill="none" stroke="#6fb9ca" stroke-width="40" stroke-linecap="round" opacity=".85"/>
     <path d="${streamD}" fill="none" stroke="url(#riv)" stroke-width="32" stroke-linecap="round"/>
     <path d="${streamD}" fill="none" stroke="#eafcff" stroke-width="2.6" stroke-dasharray="16 26" opacity=".65"/>
-    <path d="${mainD}" fill="none" stroke="#cdb789" stroke-width="42" stroke-linecap="round" stroke-linejoin="round" opacity=".45"/>
-    <path d="${mainD}" fill="none" stroke="#f3e2b8" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="${mainD}" fill="none" stroke="#d9c08a" stroke-width="3.4" stroke-dasharray="16 13"/>
-    <path d="${sideD}" fill="none" stroke="#dccfae" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" opacity=".8"/>
-    <path d="${sideD}" fill="none" stroke="#eee0c2" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="${sideD}" fill="none" stroke="#cdb98d" stroke-width="1.8" stroke-dasharray="9 10" opacity=".75"/>
+    <path d="${mainD}" fill="none" stroke="#cdb789" stroke-width="32" stroke-linecap="round" stroke-linejoin="round" opacity=".45"/>
+    <path d="${mainD}" fill="none" stroke="#f3e2b8" stroke-width="25" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="${mainD}" fill="none" stroke="#d9c08a" stroke-width="3" stroke-dasharray="14 12"/>
+    <path d="${deadEndD}" fill="none" stroke="#cdb789" stroke-width="30" stroke-linecap="round" stroke-linejoin="round" opacity=".45"/>
+    <path d="${deadEndD}" fill="none" stroke="#f3e2b8" stroke-width="23" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="${deadEndD}" fill="none" stroke="#cdb98d" stroke-width="1.8" stroke-dasharray="9 10" opacity=".7"/>
     ${bridges.map(b=>bridgeSVG(b.x,b.y,86)).join("")}
     ${bigBridgeSVG()}
   `;
@@ -1944,6 +2083,39 @@ function buildMap(){
     d.innerHTML=decoSVG(DECO_KINDS[i%DECO_KINDS.length]).replace('width="64" height="86"', `width="${Math.round(h*0.74)}" height="${h}"`);
     d.style.opacity=(.55+Math.random()*.4).toFixed(2);
     inner.appendChild(d);
+  }
+  /* ---- 迷宫绿篱：主路两侧的灌木墙，把小径夹成迷宫通道 ---- */
+  const hedgeSVG=`<svg width="46" height="34" viewBox="0 0 46 34">
+    <ellipse cx="23" cy="30" rx="16" ry="3" fill="rgba(60,90,50,.16)"/>
+    <circle cx="14" cy="20" r="10" fill="#4c8f52"/><circle cx="28" cy="17" r="11" fill="#57a05c"/><circle cx="36" cy="23" r="8" fill="#458648"/>
+    <circle cx="20" cy="14" r="4" fill="#7cc077" opacity=".55"/>
+  </svg>`;
+  const nodePts=POEMS.map((_,i)=>nodePos(i));
+  let lastHedge={x:-9999,y:-9999};
+  for(let i=1;i<MAZE.raw.length;i++){
+    const a=MAZE.raw[i-1], b=MAZE.raw[i];
+    const L=Math.hypot(b.x-a.x,b.y-a.y);
+    if(L<40) continue;
+    const nx=-(b.y-a.y)/L, ny=(b.x-a.x)/L;
+    const n=Math.floor(L/92);
+    for(let s=0;s<=n;s++){
+      const u=(s+.5)/(n+1);
+      const px=a.x+(b.x-a.x)*u, py=a.y+(b.y-a.y)*u;
+      for(const off of [38,-38]){
+        const hx=px+nx*off, hy=py+ny*off;
+        if(Math.hypot(hx-lastHedge.x,hy-lastHedge.y)<44) continue;
+        let ok=true;
+        for(const np of nodePts){ if(Math.hypot(hx-np.x,hy-np.y)<100){ ok=false; break; } }
+        if(ok) for(const de of DEAD_ENDS){ if(nearestOnSegments(de.pts,hx,hy).d<52){ ok=false; break; } }
+        if(ok) for(const st of STREAMS){ if(nearestOnSegments(st.pts,hx,hy).d<st.half+30){ ok=false; break; } }
+        if(!ok) continue;
+        lastHedge={x:hx,y:hy};
+        const d=document.createElement("div");
+        d.className="deco"; d.style.left=hx.toFixed(0)+"px"; d.style.top=hy.toFixed(0)+"px";
+        d.style.opacity=".92"; d.innerHTML=hedgeSVG;
+        inner.appendChild(d);
+      }
+    }
   }
   /* ---- 天上飘的云 ---- */
   for(let i=0;i<18;i++){
@@ -1981,6 +2153,17 @@ function buildMap(){
       inner.appendChild(c);
     });
   }
+  // 迷宫死胡同尽头的「迷宫宝箱」：走对路才能找到
+  deadEndSpots.forEach(pos=>{
+    const c=document.createElement("div"); c.className="chest"; c.id="chest"+chestNo;
+    c.style.left=(pos.x-20).toFixed(0)+"px"; c.style.top=(pos.y-20).toFixed(0)+"px";
+    c.style.animationDelay=((chestNo%9)*0.28).toFixed(2)+"s";
+    c.innerHTML=chestSVG(false);
+    c.title="迷宫深处的宝箱！";
+    const k=chestNo++;
+    c.onclick=()=>openChestQuiz(k);
+    inner.appendChild(c);
+  });
 
   /* ---- 对岸山顶：宝塔 + 山顶宝箱 ---- */
   const sm=document.createElement("div");
@@ -2679,7 +2862,7 @@ function renderEquip(){
     d.innerHTML=`<div class="ic">${t?t.e:"⬜"}</div><div class="nm">${t?t.n:slotName(sl)}</div>`;
     if(t){
       d.style.borderColor="#3fa34d"; d.style.cursor="pointer"; d.title="点击卸下";
-      d.onclick=()=>{ S.equip[sl]=null; save(); refreshHud(); renderEquip(); renderInv(); renderChar(); };
+      d.onclick=()=>{ S.equip[sl]=null; save(); refreshHud(); renderEquip(); renderInv(); renderChar(); updatePlayerLook(); };
     }
     row.appendChild(d);
   });
@@ -2697,7 +2880,7 @@ function renderInv(){
       if(!t.slot) { toast("这是收藏品，放在背包里展示～"); return; }
       if(S.equip[t.slot]===id){ S.equip[t.slot]=null; }
       else { S.equip[t.slot]=id; }
-      save(); refreshHud(); renderEquip(); renderInv(); renderChar();
+      save(); refreshHud(); renderEquip(); renderInv(); renderChar(); updatePlayerLook();
     };
     g.appendChild(d);
   });
